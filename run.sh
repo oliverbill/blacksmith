@@ -1,1 +1,1 @@
-./mvnw spring-boot:run -Dspring.profiles.active=local
+./mvnw clean spring-boot:run

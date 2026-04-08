@@ -1,21 +1,27 @@
 package com.oliversoft.blacksmith.model.dto.output;
 
 import java.util.List;
-import java.util.UUID;
+
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 
 
 
-public record ArchitectOutput 
+public record ArchitectOutput
 (
-    ChangeManagementPlan plan,
-    List<ChangeTask> tasks  
-){
+    @Valid ChangeManagementPlan plan,
+    @NotEmpty @JsonSetter(nulls = Nulls.AS_EMPTY) List<PlannedTask> plannedTasks
+) implements AgentOutput
+{
 
     public record ChangeManagementPlan(
-        String changeTitle, String changeDetail, List<String> affectedFiles, List<String> newFiles, List<String> dependencies, List<String> risks
+        @NotBlank String changeTitle, @NotBlank String changeDetail, List<String> affectedFiles, List<String> newFiles, List<String> dependencies, List<String> risks
     ){}
 
-    public record ChangeTask(
-        UUID id, String description, String filenamePath, List<UUID> dependentTasks
+    public record PlannedTask(
+        @NotBlank String id, @NotBlank String description, @NotBlank String filenamePath, List<String> dependentTasks
     ){}
 }

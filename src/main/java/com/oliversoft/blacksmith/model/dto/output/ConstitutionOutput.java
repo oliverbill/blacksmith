@@ -2,21 +2,35 @@ package com.oliversoft.blacksmith.model.dto.output;
 
 import java.util.List;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+
 public record ConstitutionOutput (
     
     DetectedStack stack,
+    
+    @NotEmpty
     List<String> architecturalPatterns,
+    
     List<String> existingModels,
+
     List<String> existingApiEndpoints,
+    
+    @NotEmpty
     List<String> codeQualityConsiderations,
     List<String> techDebtsIdentified,
+    
+    @NotBlank 
     String testCoverage,
+    
     CodeConventions codeConventions,
     DependencyAudit dependencyAudit,
+    @NotBlank
     String summary
-){
+) implements AgentOutput
+{
     public record DetectedStack(
-        String language, List<String> frameworks, String testingStack, String buildTool, List<String> dependencies, String database
+        @NotBlank String language, @NotEmpty List<String> frameworks, @NotBlank String testingStack, @NotBlank String buildTool, @NotEmpty List<String> dependencies, @NotBlank String database
     ){}
 
     public record DependencyAudit(
@@ -24,6 +38,6 @@ public record ConstitutionOutput (
     ){}
 
     public record CodeConventions(
-        String logging, String naming, String errorHandling
+        @NotBlank String logging, @NotBlank String naming, @NotBlank String errorHandling
     ){}
 }

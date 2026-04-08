@@ -12,16 +12,23 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcType;
+import org.hibernate.dialect.PostgreSQLEnumJdbcType;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import com.oliversoft.blacksmith.model.enumeration.IssueType;
 import com.oliversoft.blacksmith.model.enumeration.RunStatus;
 
+
+
 @Entity
 @Table(name="tenant_runs")
 @Getter @Setter
 @NoArgsConstructor
+@AllArgsConstructor @Builder
 public class TenantRun {
     
     @Id
@@ -33,10 +40,14 @@ public class TenantRun {
     @JoinColumn(name = "tenant_id", nullable = false)
     private Tenant tenant;
 
+    @Column(name = "full_sync_repo")
+    private boolean fullSyncRepo;
+
     @Column(name="created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
 
     @Enumerated(EnumType.STRING)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
     @Column(name="issue_type", nullable = false)
     private IssueType issueType;
 
@@ -44,9 +55,12 @@ public class TenantRun {
     private String title;
 
     @Enumerated(EnumType.STRING)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
     @Column(name="status", nullable = false)
     private RunStatus status;
 
+    @Column(name="spec", nullable = false)
+    private String spec;
 
     @Override
     public boolean equals(Object obj) {

@@ -1,14 +1,14 @@
 package com.oliversoft.blacksmith.model.entity;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
-import com.oliversoft.blacksmith.model.enumeration.TenantStatus;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -40,9 +40,9 @@ public class Tenant {
     @Column(name="constitution_auto", nullable = true)
     private String constitutionAuto;
 
-    @Column(name="status", nullable = false)
-    @Enumerated(EnumType.STRING)
-    private TenantStatus status = TenantStatus.PENDING;
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "git_repos_urls", columnDefinition = "TEXT[]")
+    private List<String> gitReposUrls;
 
     @Column(name="user_id", nullable = false, unique = true)
     private UUID userId;
