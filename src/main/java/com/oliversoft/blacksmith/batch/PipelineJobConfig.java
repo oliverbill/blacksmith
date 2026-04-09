@@ -67,8 +67,21 @@ public class PipelineJobConfig {
         return new JobBuilder("pipelineJob", repository)
             .listener(this.pipelineJobExecutionListener)
             .start(constitutionStep())
-            .next(architectStep())
-            .next(developerStep())
+                .on("SKIP").to(architectStep()) //se terminar com status=SKIP(ExitStatus("SKIP")), vai para architectStep
+            
+            .from(constitutionStep())
+                .on("*").to(architectStep()) // se terminar com qualquer outro status, também vai para architectStep
+            
+            .from(architectStep())
+                .on("SKIP").to(developerStep())
+
+            .from(architectStep())
+                .on("*").to(developerStep())
+
+            .from(developerStep())
+                .on("*").end()
+
+            .build()
             .build();
     }
 

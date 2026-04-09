@@ -55,9 +55,10 @@ public class TenantRun {
     private String title;
 
     @Enumerated(EnumType.STRING)
+    @Builder.Default
     @JdbcType(PostgreSQLEnumJdbcType.class)
     @Column(name="status", nullable = false)
-    private RunStatus status;
+    private RunStatus status = RunStatus.STARTED;
 
     @Column(name="spec", nullable = false)
     private String spec;

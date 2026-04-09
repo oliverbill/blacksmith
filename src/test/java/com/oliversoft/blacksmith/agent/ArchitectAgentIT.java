@@ -2,6 +2,8 @@ package com.oliversoft.blacksmith.agent;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.ClassPathResource;
@@ -19,6 +21,8 @@ import com.oliversoft.blacksmith.model.enumeration.AgentName;
 @ActiveProfiles("test")
 class ArchitectAgentIT {
 
+    private static final Logger log = LoggerFactory.getLogger(BlackSmithAgent.class);
+    
     @Autowired
     private BlackSmithAgent agent;
 
@@ -52,11 +56,11 @@ class ArchitectAgentIT {
                     assertThat(task.filenamePath()).isNotBlank();
                 });
 
-        System.out.println("=== Change Plan ===");
-        System.out.println(output.plan().changeTitle());
-        System.out.println(output.plan().changeDetail());
-        System.out.println("\n=== Planned Tasks ===");
+        log.info("=== Change Plan ===");
+        log.info(output.plan().changeTitle());
+        log.info(output.plan().changeDetail());
+        log.info("\n=== Planned Tasks ===");
         output.plannedTasks().forEach(t ->
-            System.out.printf("[%s] %s → %s%n", t.id(), t.description(), t.filenamePath()));
+            log.info("[%s] %s → %s%n", t.id(), t.description(), t.filenamePath()));
     }
 }

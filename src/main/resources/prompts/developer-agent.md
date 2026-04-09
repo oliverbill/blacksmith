@@ -31,8 +31,27 @@ Follow this order:
 3. Write code and unit tests and save them in the 'changedFiles' list and 'newFiles' in the 'DeveloperOutput' with the code produced in the previous steps.
 
 # Output Format
-You MUST return a valid JSON object that strictly follows the 'DeveloperOutput' schema.
-Every field is required. Use empty lists `[]` for fields with no findings — never return null.
+You MUST return a valid JSON object that strictly follows this exact schema — field names are case-sensitive:
+
+```json
+{
+  "changedFiles": [
+    {
+      "filePath": "string",
+      "content": "string"
+    }
+  ],
+  "newFiles": [
+    {
+      "filePath": "string",
+      "content": "string"
+    }
+  ]
+}
+```
+- Every field is required. Use empty lists `[]` for fields with no findings — never return null. 
+- The field names `changedFiles` and `newFiles` are mandatory — do NOT use any other variant.
+
 
 # Important
 - Search for existing code before proposing new code. Code duplication is strictly forbidden.

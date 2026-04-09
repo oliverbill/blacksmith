@@ -43,13 +43,14 @@ public class BlacksmithMcpServer {
         this.jsonMapper = jsonMapper;
     } 
 
-    @Tool(description = "Creates a new Blacksmith pipeline run for a tenant. Use this when the user wants to start analysing a codebase or implement a new feature, bug fix or tech debt.")
+    @Tool(description = "Creates a new Blacksmith pipeline run for a tenant. Use this when the user wants to start analysing a codebase or implement a new feature, bug fix or tech debt. The user might want to skip some step and to start by a specific startStep")
     public String createRun(
         Long tenantId,
         String title,
         String spec,
         IssueType type,
-        boolean fullSyncRepo){
+        boolean fullSyncRepo,
+        String startStep){
         
         var op = tenantRepo.findById(tenantId);
 
@@ -72,6 +73,7 @@ public class BlacksmithMcpServer {
             JobParameters params = new JobParametersBuilder()
                 .addLong("runId", savedRun.getId())
                 .addLong("timestamp", System.currentTimeMillis())
+                .addString("startStep", startStep != null ? startStep : "CONSTITUTION")
                 .toJobParameters();
 
             try {

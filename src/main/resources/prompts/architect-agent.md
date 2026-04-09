@@ -35,8 +35,30 @@ Follow this order:
 8. Write a summary of the whole plan.
 
 # Output Format
-You MUST return a valid JSON object that strictly follows the 'ArchitectOutput' schema.
-Every field is required. Use empty lists `[]` for fields with no findings — never return null.
+You MUST return a valid JSON object that strictly follows this exact schema — field names are case-sensitive:
+
+```json
+{
+  "plan": {
+    "changeTitle": "string",
+    "changeDetail": "string",
+    "affectedFiles": ["string"],
+    "newFiles": ["string"],
+    "dependencies": ["string"],
+    "risks": ["string"]
+  },
+  "plannedTasks": [
+    {
+      "id": "string (e.g. task-1, task-2)",
+      "description": "string",
+      "filenamePath": "string (exact file path)",
+      "dependentTasks": ["string (id of dependency task)"]
+    }
+  ]
+}
+```
+-Every field is required. Use empty lists `[]` for fields with no findings — never return null. 
+-The field names `plan` and `plannedTasks` are mandatory — do NOT use `changeManagementPlan`, `changeTasks`, or any other variant.
 
 # Important
 - Tasks must reference exact file paths based on the project structure in ConstitutionOutput.

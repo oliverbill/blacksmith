@@ -39,19 +39,20 @@ public class DeveloperTasklet extends AbstractAgentTasklet{
     @Override
     protected AgentInput buildInput(TenantRun run) throws NoPendingTasksException{
 
-        var constitutionArtifact = artifactRepository.findByRunAndArtifactType(run, ArtifactType.CONSTITUTION)
-                                                            .orElseThrow(() -> new PipelineExecutionException("Constitution Artifact not found for this run: "+run.getId()));
+        var lastConstitutionFromTenant = artifactRepository.findTopByRunTenantIdAndArtifactTypeOrderByCreatedAtDesc(
+                                                            run.getTenant().getId(),ArtifactType.CONSTITUTION)
+                                                    .orElseThrow(() -> new PipelineExecutionException("Constitution Artifact not found for tenant: " + run.getTenant().getId()));
 
-        ConstitutionOutput constitutionOutputJson = (ConstitutionOutput)super.getJsonOutputByArtifact(constitutionArtifact, ConstitutionOutput.class);                                                    
+        ConstitutionOutput constitutionOutputJson = (ConstitutionOutput)super.getJsonOutputByArtifact(lastConstitutionFromTenant, ConstitutionOutput.class);                                                    
 
-        var impactAnalysisArtifact = artifactRepository.findByRunAndArtifactType(run, ArtifactType.IMPACT_ANALYSIS)
+        var lastImpactAnalysisFromTenant = artifactRepository.findTopByRunTenantIdAndArtifactTypeOrderByCreatedAtDesc(run.getTenant().getId(), ArtifactType.IMPACT_ANALYSIS)
                                                     .orElseThrow(() -> new PipelineExecutionException("Impact Analysis Artifact not found for this run: "+run.getId()));
 
-        ArchitectOutput architectOutput = (ArchitectOutput)super.getJsonOutputByArtifact(impactAnalysisArtifact, ArchitectOutput.class);
+        ArchitectOutput architectOutput = (ArchitectOutput)super.getJsonOutputByArtifact(lastImpactAnalysisFromTenant, ArchitectOutput.class);
 
         // get the first PENDING TaskExecution for the artifact => 1 RunArtifact(ArchitectOutput) generates N TaskExecutions
-        TaskExecution taskExecution = super.taskRepository.findFirstByArtifactAndStatus(impactAnalysisArtifact, TaskStatus.PENDING)
-                                                    .orElseThrow(() -> new NoPendingTasksException("TaskExecution not found for this artifact: "+impactAnalysisArtifact.getId()));
+        TaskExecution taskExecution = super.taskRepository.findFirstByArtifactAndStatus(lastImpactAnalysisFromTenant, TaskStatus.DEV_PENDING)
+                                                    .orElseThrow(() -> new NoPendingTasksException("TaskExecution not found for this artifact: "+lastImpactAnalysisFromTenant.getId()));
 
         this.ongoingTask = taskExecution;
 
@@ -61,11 +62,16 @@ public class DeveloperTasklet extends AbstractAgentTasklet{
     }
 
     private PlannedTask getPlannedTaskByOutputAndTaskExecution(ArchitectOutput architectOutput, TaskExecution taskExecution) {
-        return architectOutput.plannedTasks().stream()
-            .filter(t -> java.util.UUID.nameUUIDFromBytes(t.id().getBytes(java.nio.charset.StandardCharsets.UTF_8))
-                                       .equals(taskExecution.getPlannedTaskId()))
-            .findFirst()
-            .orElseThrow(() -> new PipelineExecutionException("PlannedTask not found for taskExecution " + taskExecution.getId()));
+        var tasks = architectOutput.plannedTasks();
+        for (int i = 0; i < tasks.size(); i++) {
+            var t = tasks.get(i);
+            String rawId = (t.id() != null && !t.id().isBlank()) ? t.id() : (t.filenamePath() + "-" + i);
+            java.util.UUID derived = java.util.UUID.nameUUIDFromBytes(rawId.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            if (derived.equals(taskExecution.getPlannedTaskId())) {
+                return t;
+            }
+        }
+        throw new PipelineExecutionException("PlannedTask not found for taskExecution " + taskExecution.getId());
     }
 
     @Override

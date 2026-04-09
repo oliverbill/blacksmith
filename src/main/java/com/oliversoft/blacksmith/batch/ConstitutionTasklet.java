@@ -87,5 +87,5 @@ public class ConstitutionTasklet extends AbstractAgentTasklet{
     protected Class<? extends AgentOutput> getOutputType() {
         return ConstitutionOutput.class;
     }
-    
+
 }

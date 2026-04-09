@@ -109,7 +109,7 @@ public class BlackSmithAgent {
             throw new PipelineExecutionException("LLM returned a response with no generations — possible content filtering or provider error");
         }
         var content = resp.getResult().getOutput().getText();
-        log.debug("Raw LLM response content: {}", content);
+        log.info("Raw LLM response content for agent {}: {}", agent, content);
         var cleaned = cleanJson(content);
         if (cleaned == null || cleaned.isBlank()) {
             log.warn("LLM returned empty text after tool calls. Sending follow-up to request JSON output.");

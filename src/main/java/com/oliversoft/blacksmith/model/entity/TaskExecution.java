@@ -38,7 +38,6 @@ public class TaskExecution {
     @Column(name = "created_at", updatable = false, insertable = false)
     private OffsetDateTime createdAt;
 
-
     // o ArchitectTasklet cria várias TaskExecution para um RunArtifact(ArchitectOutput)
     @ManyToOne
     @JoinColumn(name = "artifact_id", nullable = false)
@@ -49,8 +48,9 @@ public class TaskExecution {
 
     @Enumerated(EnumType.STRING)
     @JdbcType(PostgreSQLEnumJdbcType.class)
+    @Builder.Default
     @Column(name = "status", nullable = false)
-    private TaskStatus status = TaskStatus.PENDING;
+    private TaskStatus status = TaskStatus.DEV_PENDING;
 
     @Override
     public int hashCode() {

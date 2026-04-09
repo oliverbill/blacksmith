@@ -1,9 +1,11 @@
 package com.oliversoft.blacksmith.batch;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
@@ -62,6 +64,19 @@ public abstract class AbstractAgentTasklet implements Tasklet{
         
         TenantRun run = runRepository.findById(runId).orElseThrow(() -> new PipelineExecutionException("Run not found: " + runId, null));
 
+        String startStep = chunkContext
+            .getStepContext()
+            .getStepExecution()
+            .getJobParameters()
+            .getString("startStep");
+
+        if(shouldExitWithSkipStatus(startStep)){
+            log.info("Skipping step {} — startStep is {}", getAgentName(), startStep);
+            onSkip(run);
+            contribution.setExitStatus(new ExitStatus("SKIP"));
+            return RepeatStatus.FINISHED;
+        }
+
         Optional<AgentOutput> reusedOutput = reuseOutput(run);
 
         AgentOutput output;
@@ -106,16 +121,27 @@ public abstract class AbstractAgentTasklet implements Tasklet{
         }
         return outputJson;
     }
+
+    private boolean shouldExitWithSkipStatus(String startStep) {
+        if (startStep == null || startStep.isBlank()) return false;
+        
+        var order = List.of("CONSTITUTION", "ARCHITECT", "DEVELOPER");
+        int startIndex = order.indexOf(startStep.toUpperCase());
+        int currentIndex = order.indexOf(getAgentName().name());
+        return startIndex > 0 && currentIndex < startIndex;
+    }
     
     protected abstract Optional<AgentOutput> reuseOutput(TenantRun run);
     protected abstract AgentInput buildInput(TenantRun run) throws NoPendingTasksException, JsonProcessingException;
     protected abstract AgentName getAgentName();
     protected abstract ArtifactType getArtifactType();
-    protected abstract Class<? extends AgentOutput> getOutputType();
+    protected abstract Class<? extends AgentOutput> getOutputType();    
     
     protected RepeatStatus getRepeatStatus() {
         return RepeatStatus.FINISHED;
     }
+
+    protected void onSkip(TenantRun run) {}
 
     protected void afterSuccess(TenantRun run, RunArtifact output) {}
 

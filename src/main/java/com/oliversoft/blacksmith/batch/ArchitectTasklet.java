@@ -42,12 +42,13 @@ public class ArchitectTasklet extends AbstractAgentTasklet{
     @Override
     protected AgentInput buildInput(TenantRun run) throws NoPendingTasksException{
         
-        var constitutionArtifact = artifactRepository.findByRunAndArtifactType(run, ArtifactType.CONSTITUTION)
-                                                    .orElseThrow(() -> new PipelineExecutionException("Constitution Artifact not found for this run: "+run.getId()));
+        var lastConstArtifactFromTenant = artifactRepository.findTopByRunTenantIdAndArtifactTypeOrderByCreatedAtDesc(
+                                                            run.getTenant().getId(),ArtifactType.CONSTITUTION)
+                                                    .orElseThrow(() -> new PipelineExecutionException("Constitution Artifact not found for tenant: " + run.getTenant().getId()));
 
         ConstitutionOutput constitutionOutput = null;
         try {
-            constitutionOutput = super.jsonMapper.readValue(constitutionArtifact.getContent(), ConstitutionOutput.class);
+            constitutionOutput = super.jsonMapper.readValue(lastConstArtifactFromTenant.getContent(), ConstitutionOutput.class);
         } catch (JsonProcessingException e) {
             throw new PipelineExecutionException("Failed to read constitution artifact json ", e);
         }
@@ -92,15 +93,29 @@ public class ArchitectTasklet extends AbstractAgentTasklet{
         }
 
         var tasks = new ArrayList<TaskExecution>();
-        output.plannedTasks().forEach(t -> tasks.add(TaskExecution.builder()
-                                                .plannedTaskId(UUID.nameUUIDFromBytes(t.id().getBytes(StandardCharsets.UTF_8)))
-                                                .artifact(artifact)
-                                                .build()));
+        for (int i = 0; i < output.plannedTasks().size(); i++) {
+            var t = output.plannedTasks().get(i);
+            String rawId = (t.id() != null && !t.id().isBlank()) ? t.id() : (t.filenamePath() + "-" + i);
+            tasks.add(TaskExecution.builder()
+                .plannedTaskId(UUID.nameUUIDFromBytes(rawId.getBytes(StandardCharsets.UTF_8)))
+                .artifact(artifact)
+                .build());
+        }
 
         taskRepository.saveAll(tasks);
     }
 
     protected Optional<AgentOutput> reuseOutput(TenantRun run) {
         return Optional.empty();
+    }
+
+    @Override
+    protected void onSkip(TenantRun run) {
+        var architectArtifact = artifactRepository.findTopByRunTenantIdAndArtifactTypeOrderByCreatedAtDesc(
+                                                    run.getTenant().getId(),ArtifactType.IMPACT_ANALYSIS)
+                                                .orElseThrow(() -> new PipelineExecutionException(
+                                                    "Architect artifact not found for tenant: " + run.getTenant().getId()));
+
+        afterSuccess(run, architectArtifact);        
     }
 }
