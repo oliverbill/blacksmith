@@ -54,7 +54,7 @@ public class BlackSmithAgent {
             for (int i = 0; i < candidates.size(); i++) {
                 RoutedChatClient candidate = candidates.get(i);
                 try {
-                    var client = invoke(candidate.client(), systemPrompt, userPrompt, outputType);
+                    var client = invoke(candidate.client(), systemPrompt, userPrompt, outputType, agent);
                     if (client == null)
                         throw new PipelineExecutionException("error invoke LLM client");
                     return client;
@@ -84,17 +84,18 @@ public class BlackSmithAgent {
     private <O> O invoke(org.springframework.ai.chat.client.ChatClient client,
                          String systemPrompt,
                          String userPrompt,
-                         Class<O> outputType) throws JsonProcessingException                      
+                         Class<O> outputType,
+                         AgentName agent) throws JsonProcessingException
     {
-        log.info("Invoking LLM with tools: {}", java.util.Arrays.stream(this.bashTools.getClass().getMethods())
-                .filter(m -> m.isAnnotationPresent(org.springframework.ai.tool.annotation.Tool.class))
-                .map(java.lang.reflect.Method::getName)
-                .toList());
-        var resp = client
+        boolean useTools = agent == AgentName.CONSTITUTION || agent == AgentName.DEVELOPER;
+        log.info("Invoking agent={} useTools={}", agent, useTools);
+
+        var promptSpec = client
                 .prompt()
                     .system(systemPrompt)
-                    .user(userPrompt)
-                .tools(this.bashTools)
+                    .user(userPrompt);
+
+        var resp = (useTools ? promptSpec.tools(this.bashTools) : promptSpec)
                 .call()
                 .chatResponse();
 

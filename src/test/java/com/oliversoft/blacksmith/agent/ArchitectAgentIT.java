@@ -35,7 +35,7 @@ class ArchitectAgentIT {
 
     @Test
     void architectAgent_shouldProducePlannedTasks_forNewFeatureSpec() {
-        var spec = "crie uma nova run para uma nova feature: implementar o tool approveStep.";
+        var spec = "crie uma nova run para uma nova feature: um novo chatclient para o provider Deepseek.";
         var input = new ArchitectInput(constitution, spec);
 
         ArchitectOutput output = agent.processInput(input, AgentName.ARCHITECT, ArchitectOutput.class);
