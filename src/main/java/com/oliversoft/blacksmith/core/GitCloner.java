@@ -96,6 +96,11 @@ public class GitCloner {
         }
     }
 
+    public Path getRepoLocalPath(String repoUrl) {
+        String repoFolderName = sanitizeRepoName(repoUrl);
+        return cloneBaseFolder.resolve(repoFolderName);
+    }
+
     /**
      * Sanitizes a repo URL into a safe folder name.
      * e.g., https://github.com/oliverbill/blacksmith -> github-com-oliverbill-blacksmith

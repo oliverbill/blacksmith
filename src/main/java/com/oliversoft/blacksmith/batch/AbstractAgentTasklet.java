@@ -108,7 +108,7 @@ public abstract class AbstractAgentTasklet implements Tasklet{
         artifactRepository.save(artifactOutput);
 
         afterSuccess(run, artifactOutput);
-        
+
         return getRepeatStatus();
     }
 

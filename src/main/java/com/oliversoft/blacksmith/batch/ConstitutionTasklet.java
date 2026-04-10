@@ -8,16 +8,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.oliversoft.blacksmith.agent.BlackSmithAgent;
 import com.oliversoft.blacksmith.core.GitCloner;
-import com.oliversoft.blacksmith.exception.PipelineExecutionException;
 import com.oliversoft.blacksmith.model.dto.input.AgentInput;
 import com.oliversoft.blacksmith.model.dto.input.ConstitutionInput;
 import com.oliversoft.blacksmith.model.dto.output.AgentOutput;
 import com.oliversoft.blacksmith.model.dto.output.ConstitutionOutput;
-import com.oliversoft.blacksmith.model.entity.RunArtifact;
 import com.oliversoft.blacksmith.model.entity.TenantRun;
 import com.oliversoft.blacksmith.model.enumeration.AgentName;
 import com.oliversoft.blacksmith.model.enumeration.ArtifactType;
@@ -42,6 +39,13 @@ public class ConstitutionTasklet extends AbstractAgentTasklet{
     @Override
     protected AgentInput buildInput(TenantRun run) {
 
+        List<String> resolvedPaths = getRepoLocalPaths(run);
+        
+        var input = new ConstitutionInput(resolvedPaths, run.getTenant().getConstitutionManual());
+        return input;
+    }
+
+    private List<String> getRepoLocalPaths(TenantRun run) {
         List<String> resolvedPaths = run.getTenant().getGitReposUrls().stream()
             .map(repoUrl -> {
                 // Clone repository to local filesystem and return local path
@@ -49,9 +53,7 @@ public class ConstitutionTasklet extends AbstractAgentTasklet{
                 return localPath.toString();
             })
             .toList();
-        
-        var input = new ConstitutionInput(resolvedPaths, run.getTenant().getConstitutionManual());
-        return input;
+        return resolvedPaths;
     }
 
     @Override

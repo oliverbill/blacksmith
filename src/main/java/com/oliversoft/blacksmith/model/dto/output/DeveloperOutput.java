@@ -1,7 +1,6 @@
 package com.oliversoft.blacksmith.model.dto.output;
 
 import java.util.List;
-import jakarta.validation.constraints.NotBlank;
 
 public record DeveloperOutput(
 
@@ -10,7 +9,8 @@ public record DeveloperOutput(
 ) implements AgentOutput 
 {
     public record GeneratedFile(
-        @NotBlank String filePath,
-        @NotBlank String content
+        String filePath,
+        String content,
+        String repoUrl
 ) {}
 }

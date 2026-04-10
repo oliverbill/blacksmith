@@ -58,6 +58,8 @@ public class RunArtifact {
     @Column(name = "content", nullable = false)
     private String content;
 
+    
+
     @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;

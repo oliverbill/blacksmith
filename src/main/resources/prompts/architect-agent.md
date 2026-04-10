@@ -51,12 +51,14 @@ You MUST return a valid JSON object that strictly follows this exact schema — 
     {
       "id": "string (e.g. task-1, task-2)",
       "description": "string",
+      "repoUrl": "string",
       "filenamePath": "string (exact file path)",
       "dependentTasks": ["string (id of dependency task)"]
     }
   ]
 }
 ```
+-The repoUrl field is the original repository URL where this file belongs — must match one of the provided repository URLs
 -Every field is required. Use empty lists `[]` for fields with no findings — never return null. 
 -The field names `plan` and `plannedTasks` are mandatory — do NOT use `changeManagementPlan`, `changeTasks`, or any other variant.
 
