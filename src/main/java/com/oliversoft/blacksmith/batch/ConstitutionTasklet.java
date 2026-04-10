@@ -15,6 +15,7 @@ import com.oliversoft.blacksmith.model.dto.input.AgentInput;
 import com.oliversoft.blacksmith.model.dto.input.ConstitutionInput;
 import com.oliversoft.blacksmith.model.dto.output.AgentOutput;
 import com.oliversoft.blacksmith.model.dto.output.ConstitutionOutput;
+import com.oliversoft.blacksmith.model.dto.output.ReusedArtifact;
 import com.oliversoft.blacksmith.model.entity.TenantRun;
 import com.oliversoft.blacksmith.model.enumeration.AgentName;
 import com.oliversoft.blacksmith.model.enumeration.ArtifactType;
@@ -57,7 +58,7 @@ public class ConstitutionTasklet extends AbstractAgentTasklet{
     }
 
     @Override
-    protected Optional<AgentOutput> reuseOutput(TenantRun run) {
+    protected Optional<ReusedArtifact> reuseOutput(TenantRun run) {
         if (run.isFullSyncRepo()) return Optional.empty();
         
         return artifactRepository
@@ -67,7 +68,8 @@ public class ConstitutionTasklet extends AbstractAgentTasklet{
             )
             .flatMap(artifact -> {
                 try {
-                    return Optional.of((AgentOutput) jsonMapper.readValue(artifact.getContent(), ConstitutionOutput.class));
+                    ConstitutionOutput output = jsonMapper.readValue(artifact.getContent(), ConstitutionOutput.class);
+                    return Optional.of(new ReusedArtifact(output, artifact));
                 } catch (Exception e) {
                     log.warn("Failed to deserialize existing constitution, will re-run agent", e);
                     return Optional.empty();

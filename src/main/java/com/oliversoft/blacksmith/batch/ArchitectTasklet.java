@@ -2,7 +2,6 @@ package com.oliversoft.blacksmith.batch;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Optional;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -103,10 +102,6 @@ public class ArchitectTasklet extends AbstractAgentTasklet{
         }
 
         taskRepository.saveAll(tasks);
-    }
-
-    protected Optional<AgentOutput> reuseOutput(TenantRun run) {
-        return Optional.empty();
     }
 
     @Override

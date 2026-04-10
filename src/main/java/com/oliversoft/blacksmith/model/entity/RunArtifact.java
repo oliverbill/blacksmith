@@ -58,7 +58,9 @@ public class RunArtifact {
     @Column(name = "content", nullable = false)
     private String content;
 
-    
+    @ManyToOne
+    @JoinColumn(name="source_artifact_id", nullable = true)// pode ou nao reutilizar um artifact
+    private RunArtifact sourceResusedArtifact;
 
     @Override
     public boolean equals(Object obj) {

@@ -19,6 +19,7 @@ import com.oliversoft.blacksmith.exception.NoPendingTasksException;
 import com.oliversoft.blacksmith.exception.PipelineExecutionException;
 import com.oliversoft.blacksmith.model.dto.input.AgentInput;
 import com.oliversoft.blacksmith.model.dto.output.AgentOutput;
+import com.oliversoft.blacksmith.model.dto.output.ReusedArtifact;
 import com.oliversoft.blacksmith.model.entity.RunArtifact;
 import com.oliversoft.blacksmith.model.entity.TenantRun;
 import com.oliversoft.blacksmith.model.enumeration.AgentName;
@@ -77,17 +78,21 @@ public abstract class AbstractAgentTasklet implements Tasklet{
             return RepeatStatus.FINISHED;
         }
 
-        Optional<AgentOutput> reusedOutput = reuseOutput(run);
-
+        Optional<ReusedArtifact> reusedOutput = reuseOutput(run);
+        
         AgentOutput output;
+        RunArtifact sourceArtifact = null;
+
         if (reusedOutput.isPresent()) {
             log.info("Reusing existing output for agent {}", getAgentName());
-            output = reusedOutput.get();
+            output = reusedOutput.get().output();
+            sourceArtifact = reusedOutput.get().sourceArtifact();
         } else {
             AgentInput input;
             try {
                 input = buildInput(run);
             } catch (NoPendingTasksException e) {
+                log.info("No pending tasks for agent {} — finishing step. Reason: {}", getAgentName(), e.getMessage());
                 return RepeatStatus.FINISHED;
             }
             log.info("Input size: {} chars", jsonMapper.writeValueAsString(input).length());
@@ -103,6 +108,7 @@ public abstract class AbstractAgentTasklet implements Tasklet{
                                         .agentName(this.getAgentName())
                                         .artifactType(this.getArtifactType())
                                         .content(jsonOutput)
+                                        .sourceResusedArtifact(sourceArtifact)
                                         .build();
 
         artifactRepository.save(artifactOutput);
@@ -131,7 +137,6 @@ public abstract class AbstractAgentTasklet implements Tasklet{
         return startIndex > 0 && currentIndex < startIndex;
     }
     
-    protected abstract Optional<AgentOutput> reuseOutput(TenantRun run);
     protected abstract AgentInput buildInput(TenantRun run) throws NoPendingTasksException, JsonProcessingException;
     protected abstract AgentName getAgentName();
     protected abstract ArtifactType getArtifactType();
@@ -141,6 +146,9 @@ public abstract class AbstractAgentTasklet implements Tasklet{
         return RepeatStatus.FINISHED;
     }
 
+    protected Optional<ReusedArtifact> reuseOutput(TenantRun run) {
+        return Optional.empty();
+    }
     protected void onSkip(TenantRun run) {}
 
     protected void afterSuccess(TenantRun run, RunArtifact output) {}

@@ -148,8 +148,4 @@ public class DeveloperTasklet extends AbstractAgentTasklet{
     protected RepeatStatus getRepeatStatus() {
         return RepeatStatus.CONTINUABLE;
     }
-    
-    protected Optional<AgentOutput> reuseOutput(TenantRun run) {
-        return Optional.empty();
-    }
 }
