@@ -1,7 +1,5 @@
 package com.oliversoft.blacksmith.batch;
 
-import java.nio.file.Path;
-import java.util.List;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -9,10 +7,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.oliversoft.blacksmith.agent.BlackSmithAgent;
-import com.oliversoft.blacksmith.core.GitCloner;
-import com.oliversoft.blacksmith.model.dto.input.AgentInput;
-import com.oliversoft.blacksmith.model.dto.input.ConstitutionInput;
+import com.oliversoft.blacksmith.agent.BlacksmithAgent;
+import com.oliversoft.blacksmith.inputbuilder.InputBuilderRegistry;
 import com.oliversoft.blacksmith.model.dto.output.AgentOutput;
 import com.oliversoft.blacksmith.model.dto.output.ConstitutionOutput;
 import com.oliversoft.blacksmith.model.dto.output.ReusedArtifact;
@@ -22,43 +18,21 @@ import com.oliversoft.blacksmith.model.enumeration.ArtifactType;
 import com.oliversoft.blacksmith.persistence.RunArtifactRepository;
 import com.oliversoft.blacksmith.persistence.TaskExecutionRepository;
 import com.oliversoft.blacksmith.persistence.TenantRunRepository;
+import com.oliversoft.blacksmith.util.BlacksmithUtils;
 
 @Component
 public class ConstitutionTasklet extends AbstractAgentTasklet{
 
     private static final Logger log = LoggerFactory.getLogger(ConstitutionTasklet.class);
-    
-    private final GitCloner gitCloner;
 
-    public ConstitutionTasklet(BlackSmithAgent agent, TenantRunRepository runRepository,
-            RunArtifactRepository artifactRepository, TaskExecutionRepository taskRepository, 
-            ObjectMapper jsonMapper, GitCloner gitCloner) {
-        super(agent, runRepository, artifactRepository, taskRepository, jsonMapper);
-        this.gitCloner = gitCloner;
+    public ConstitutionTasklet(BlacksmithAgent agent, TenantRunRepository runRepository,
+            RunArtifactRepository artifactRepository, TaskExecutionRepository taskRepository,
+            ObjectMapper jsonMapper,InputBuilderRegistry inputBuilderRegistry,BlacksmithUtils utils) {
+        super(agent, runRepository, artifactRepository, taskRepository, jsonMapper, inputBuilderRegistry,utils);
     }
 
     @Override
-    protected AgentInput buildInput(TenantRun run) {
-
-        List<String> resolvedPaths = getRepoLocalPaths(run);
-        
-        var input = new ConstitutionInput(resolvedPaths, run.getTenant().getConstitutionManual());
-        return input;
-    }
-
-    private List<String> getRepoLocalPaths(TenantRun run) {
-        List<String> resolvedPaths = run.getTenant().getGitReposUrls().stream()
-            .map(repoUrl -> {
-                // Clone repository to local filesystem and return local path
-                Path localPath = gitCloner.cloneOrPull(repoUrl);
-                return localPath.toString();
-            })
-            .toList();
-        return resolvedPaths;
-    }
-
-    @Override
-    protected Optional<ReusedArtifact> reuseOutput(TenantRun run) {
+    protected Optional<ReusedArtifact> reuseConstitutionOutput(TenantRun run) {
         if (run.isFullSyncRepo()) return Optional.empty();
         
         return artifactRepository

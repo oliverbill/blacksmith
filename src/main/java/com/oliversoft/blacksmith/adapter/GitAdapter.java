@@ -1,12 +1,11 @@
-package com.oliversoft.blacksmith.core;
+package com.oliversoft.blacksmith.adapter;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 
+import org.eclipse.jgit.api.Git;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,23 +14,16 @@ import org.springframework.stereotype.Component;
 import com.oliversoft.blacksmith.exception.PipelineExecutionException;
 
 @Component
-public class GitCloner {
+public class GitAdapter {
 
-    private static final Logger log = LoggerFactory.getLogger(GitCloner.class);
+    private static final Logger log = LoggerFactory.getLogger(GitAdapter.class);
 
     private final Path cloneBaseFolder;
 
-    public GitCloner(@Value("${blacksmith.tenant.repo.basefolder}") String cloneBaseFolder) {
+    public GitAdapter(@Value("${blacksmith.tenant.repo.basefolder}") String cloneBaseFolder) {
         this.cloneBaseFolder = Path.of(cloneBaseFolder);
     }
 
-    /**
-     * Clones a git repository and returns the local path.
-     * If the repository already exists, it will be updated (git pull).
-     *
-     * @param repoUrl The URL of the git repository (https://github.com/...)
-     * @return The local path to the cloned repository
-     */
     public Path cloneOrPull(String repoUrl) {
         try {
             String repoFolderName = sanitizeRepoName(repoUrl);
@@ -43,7 +35,9 @@ public class GitCloner {
 
             if (Files.exists(gitHead)) {
                 log.info("Repository already cloned at {}. Pulling latest changes...", targetDir);
-                runGit(targetDir, "git", "pull");
+                try (Git git = Git.open(targetDir.toFile())) {
+                    git.pull().call();
+                }
             } else {
                 if (Files.exists(targetDir)) {
                     log.warn("Directory {} exists but is not a valid git repo. Deleting for fresh clone.", targetDir);
@@ -54,7 +48,11 @@ public class GitCloner {
                     }
                 }
                 log.info("Cloning {} to {}", repoUrl, targetDir);
-                runGit(cloneBaseFolder, "git", "clone", repoUrl, targetDir.toString());
+                Git.cloneRepository()
+                    .setURI(repoUrl)
+                    .setDirectory(targetDir.toFile())
+                    .call()
+                    .close();
             }
 
             return targetDir;
@@ -62,37 +60,30 @@ public class GitCloner {
         } catch (PipelineExecutionException e) {
             throw e;
         } catch (Exception e) {
-            throw new PipelineExecutionException("Failed to clone repository: " + repoUrl, e);
+            throw new PipelineExecutionException("Failed to clone/pull repository: " + repoUrl, e);
         }
     }
 
-    private void runGit(Path workingDir, String... command) {
-        try {
-            ProcessBuilder pb = new ProcessBuilder(command);
-            pb.directory(workingDir.toFile());
-            pb.redirectErrorStream(true);
-
-            Process process = pb.start();
-            StringBuilder output = new StringBuilder();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    output.append(line).append('\n');
-                }
-            }
-
-            int exitCode = process.waitFor();
-            if (exitCode != 0) {
-                throw new PipelineExecutionException(
-                    "git command failed (exit " + exitCode + "): " + String.join(" ", command) + "\n" + output);
-            }
-
-            log.debug("git output: {}", output);
-
-        } catch (PipelineExecutionException e) {
-            throw e;
+    public void commitAndPush(String repoUrl, String message) {
+        Path targetDir = getRepoLocalPath(repoUrl);
+        try (Git git = Git.open(targetDir.toFile())) {
+            git.add().addFilepattern(".").call();
+            git.commit().setMessage(message).call();
+            git.push().call();
+            log.info("Committed and pushed to {}: {}", repoUrl, message);
         } catch (Exception e) {
-            throw new PipelineExecutionException("Failed to run git command: " + String.join(" ", command), e);
+            throw new PipelineExecutionException("Failed to commit and push: " + repoUrl, e);
+        }
+    }
+
+    public void createBranch(String repoUrl, String branchName) {
+        Path targetDir = getRepoLocalPath(repoUrl);
+        try (Git git = Git.open(targetDir.toFile())) {
+            git.branchCreate().setName(branchName).call();
+            git.checkout().setName(branchName).call();
+            log.info("Created and checked out branch {} in {}", branchName, repoUrl);
+        } catch (Exception e) {
+            throw new PipelineExecutionException("Failed to create branch: " + branchName, e);
         }
     }
 
@@ -101,10 +92,6 @@ public class GitCloner {
         return cloneBaseFolder.resolve(repoFolderName);
     }
 
-    /**
-     * Sanitizes a repo URL into a safe folder name.
-     * e.g., https://github.com/oliverbill/blacksmith -> github-com-oliverbill-blacksmith
-     */
     private String sanitizeRepoName(String repoUrl) {
         try {
             URI uri = new URI(repoUrl);

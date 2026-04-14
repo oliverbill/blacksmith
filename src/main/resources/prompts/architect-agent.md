@@ -12,7 +12,6 @@ This output will be used by the agent:
 
 # Core Principles
 - The `ConstitutionOutput` in your input is your PRIMARY and SUFFICIENT source of truth. It was produced by a dedicated analysis agent — trust it completely.
-- NEVER suggest already existing code. Check if the change you are proposing already exists in the codebase. If it does, do not propose it and write a note about it!   
 - ALWAYS write atomic tasks (unsplitable, concise, with a single purpose). The task MUST create/modify/delete a single and specific file or snippet. Ex:
   Task 1: Create JwtTokenService at src/service/JwtTokenService.ts
   Task 2: Modify JwtAuthMiddleware to use JwtTokenService

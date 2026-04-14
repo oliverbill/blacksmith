@@ -15,4 +15,12 @@ public interface TaskExecutionRepository extends JpaRepository<TaskExecution, Lo
     Optional<TaskExecution> findFirstByArtifactAndStatus(RunArtifact artifact, TaskStatus status);
 
     List<TaskExecution> findByArtifactRun(TenantRun run);
+    
+    List<TaskExecution> findByStatus(TaskStatus status);
+    
+    long countByStatus(TaskStatus status);
+    
+    List<TaskExecution> findByArtifactAndStatus(RunArtifact artifact, TaskStatus status);
+    
+    long countByArtifactAndStatus(RunArtifact artifact, TaskStatus status);
 }

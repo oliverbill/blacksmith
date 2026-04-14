@@ -21,10 +21,10 @@ import com.oliversoft.blacksmith.model.enumeration.AgentName;
 @ActiveProfiles("test")
 class ArchitectAgentIT {
 
-    private static final Logger log = LoggerFactory.getLogger(BlackSmithAgent.class);
+    private static final Logger log = LoggerFactory.getLogger(BlacksmithAgent.class);
     
     @Autowired
-    private BlackSmithAgent agent;
+    private BlacksmithAgent agent;
 
     @Autowired
     private ObjectMapper objectMapper;

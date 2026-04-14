@@ -65,7 +65,7 @@ public class BashTools {
         return collected.isEmpty() ? "Directory is empty." : String.join("\n", collected);
     }
 
-    @Tool(description = "Reads the content of a file. Only use for small config files under 5KB")
+    @Tool(description = "Reads the content of a file. Only use for small config files under 5KB. IMPORTANT: Only attempt to read files that you have confirmed exist by using listFiles first.")
     public String readFile(String path) {
         var validation = validate(path);
         if (validation != null) return validation;
@@ -75,6 +75,9 @@ public class BashTools {
             if (Files.isDirectory(file)) {
                 return "Error: '" + path + "' is a directory. Use listFiles to list its contents.";
             }
+            if (!Files.exists(file)) {
+                return "Error: File '" + path + "' does not exist. Use listFiles to see available files and directories.";
+            }
             return Files.readString(file);
         } catch (IOException e) {
             log.error("Failed to read file: {}", path, e);
@@ -82,7 +85,7 @@ public class BashTools {
         }
     }
 
-    @Tool(description = "Search for this pattern in this file")
+    @Tool(description = "Search for this pattern in this file. IMPORTANT: Only search in files that you have confirmed exist by using listFiles first.")
     public String grep(String filePath, String pattern) {
         var validation = validate(filePath);
         if (validation != null) return validation;
@@ -91,6 +94,9 @@ public class BashTools {
             var file = Path.of(filePath);
             if (Files.isDirectory(file)) {
                 return "Error: '" + filePath + "' is a directory. Use listFiles to list its contents.";
+            }
+            if (!Files.exists(file)) {
+                return "Error: File '" + filePath + "' does not exist. Use listFiles to see available files and directories.";
             }
 
             var lines = Files.readAllLines(file);
@@ -108,12 +114,17 @@ public class BashTools {
         }
     }
 
-    @Tool(description = "Reads a specific section of a file from startLine to endLine.")
+    @Tool(description = "Reads a specific section of a file from startLine to endLine. IMPORTANT: Only read from files that you have confirmed exist by using listFiles first.")
     public String readFileSection(String path, int startLine, int endLine) {
         var validation = validate(path);
         if (validation != null) return validation;
 
-        try (var lines = Files.lines(Path.of(path))) {
+        var file = Path.of(path);
+        if (!Files.exists(file)) {
+            return "Error: File '" + path + "' does not exist. Use listFiles to see available files and directories.";
+        }
+
+        try (var lines = Files.lines(file)) {
             return lines
                 .skip(startLine - 1)
                 .limit(endLine - startLine + 1)
@@ -123,7 +134,7 @@ public class BashTools {
         }
     }
 
-    @Tool(description = "Returns metadata of a file: number of lines, size in bytes, last modified.")
+    @Tool(description = "Returns metadata of a file: number of lines, size in bytes, last modified. IMPORTANT: Only check files that you have confirmed exist by using listFiles first.")
     public String getFileInfo(String path) {
         var validation = validate(path);
         if (validation != null) return validation;
@@ -131,6 +142,9 @@ public class BashTools {
         try {
             var file = Path.of(path);
             if (Files.isDirectory(file)) return "Is a directory";
+            if (!Files.exists(file)) {
+                return "Error: File '" + path + "' does not exist. Use listFiles to see available files and directories.";
+            }
             long lines = Files.lines(file).count();
             long bytes = Files.size(file);
             return "lines: " + lines + ", bytes: " + bytes;

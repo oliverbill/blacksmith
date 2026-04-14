@@ -1,12 +1,11 @@
 package com.oliversoft.blacksmith.model.entity;
 
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 
 import org.hibernate.annotations.JdbcType;
 import org.hibernate.dialect.PostgreSQLEnumJdbcType;
 
-import com.oliversoft.blacksmith.model.enumeration.AgentName;
-import com.oliversoft.blacksmith.model.enumeration.ArtifactType;
+import com.oliversoft.blacksmith.model.enumeration.RefinementStatus;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -18,8 +17,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -27,50 +24,47 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name="run_artifacts", uniqueConstraints = {
-    @UniqueConstraint(columnNames = {"run_id", "type"}, name = "uk_run_artifact_type")
-})
+@Table(name = "refinement_requests")
 @Getter @Setter
 @NoArgsConstructor
 @AllArgsConstructor @Builder
-public class RunArtifact {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+public class RefinementRequest {
+    
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne
+    @JoinColumn(name = "tenant_id")
+    private Tenant tenant;
+
+    @ManyToOne
+    @JoinColumn(name = "source_artifact_id")
+    private RunArtifact sourceArtifact;
+
+    @Column(name = "feedback")
+    private String feedback;
+
+    @Column(name = "start_step")
+    private String startStep;
+
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    @JdbcType(PostgreSQLEnumJdbcType.class)
+    @Column(name = "status")
+    private RefinementStatus status = RefinementStatus.PENDING_CONFIRMATION;
+
+    @Column(name = "refinement_result")
+    private String refinementResult;
+
     @Column(name="created_at", insertable = false, updatable = false)
-    private OffsetDateTime createdAt;
-    
-    // 1 Run produces N Artifacts(AgentOutput records)
-    @ManyToOne
-    @JoinColumn(name="run_id", nullable = false)
-    private TenantRun run;
-
-    @Enumerated(EnumType.STRING)
-    @JdbcType(PostgreSQLEnumJdbcType.class)
-    @Column(name = "agent", nullable = false)
-    private AgentName agentName;
-
-    @Enumerated(EnumType.STRING)
-    @JdbcType(PostgreSQLEnumJdbcType.class)
-    @Column(name = "type", nullable = false)
-    private ArtifactType artifactType;
-
-    @NotNull(message = "artifact content is empty")
-    @Column(name = "content", nullable = false)
-    private String content;
-
-    @ManyToOne
-    @JoinColumn(name="source_artifact_id", nullable = true)// pode ou nao reutilizar um artifact
-    private RunArtifact sourceResusedArtifact;
+    private LocalDateTime createdAt;
 
     @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
         if (obj == null) return false;
         if (getClass() != obj.getClass()) return false;
-        RunArtifact other = (RunArtifact) obj;
+        RefinementRequest other = (RefinementRequest) obj;
         if (this.id == null) {
             if (other.id != null)
                 return false;
@@ -83,4 +77,5 @@ public class RunArtifact {
     public int hashCode() {
         return getClass().hashCode();
     }
+
 }

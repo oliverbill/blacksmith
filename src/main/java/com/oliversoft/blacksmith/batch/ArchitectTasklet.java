@@ -10,14 +10,11 @@ import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.oliversoft.blacksmith.agent.BlackSmithAgent;
-import com.oliversoft.blacksmith.exception.NoPendingTasksException;
+import com.oliversoft.blacksmith.agent.BlacksmithAgent;
 import com.oliversoft.blacksmith.exception.PipelineExecutionException;
-import com.oliversoft.blacksmith.model.dto.input.AgentInput;
-import com.oliversoft.blacksmith.model.dto.input.ArchitectInput;
+import com.oliversoft.blacksmith.inputbuilder.InputBuilderRegistry;
 import com.oliversoft.blacksmith.model.dto.output.AgentOutput;
 import com.oliversoft.blacksmith.model.dto.output.ArchitectOutput;
-import com.oliversoft.blacksmith.model.dto.output.ConstitutionOutput;
 import com.oliversoft.blacksmith.model.entity.RunArtifact;
 import com.oliversoft.blacksmith.model.entity.TaskExecution;
 import com.oliversoft.blacksmith.model.entity.TenantRun;
@@ -26,34 +23,17 @@ import com.oliversoft.blacksmith.model.enumeration.ArtifactType;
 import com.oliversoft.blacksmith.persistence.RunArtifactRepository;
 import com.oliversoft.blacksmith.persistence.TaskExecutionRepository;
 import com.oliversoft.blacksmith.persistence.TenantRunRepository;
+import com.oliversoft.blacksmith.util.BlacksmithUtils;
 
 @Component
 public class ArchitectTasklet extends AbstractAgentTasklet{
 
     private static final Logger log = LoggerFactory.getLogger(ArchitectTasklet.class);
 
-
-    public ArchitectTasklet(BlackSmithAgent agent, TenantRunRepository runRepository,
-            RunArtifactRepository artifactRepository, TaskExecutionRepository taskRepository, ObjectMapper jsonMapper) {
-        super(agent, runRepository, artifactRepository, taskRepository, jsonMapper);
-    }
-
-    @Override
-    protected AgentInput buildInput(TenantRun run) throws NoPendingTasksException{
-        
-        var lastConstArtifactFromTenant = artifactRepository.findTopByRunTenantIdAndArtifactTypeOrderByCreatedAtDesc(
-                                                            run.getTenant().getId(),ArtifactType.CONSTITUTION)
-                                                    .orElseThrow(() -> new PipelineExecutionException("Constitution Artifact not found for tenant: " + run.getTenant().getId()));
-
-        ConstitutionOutput constitutionOutput = null;
-        try {
-            constitutionOutput = super.jsonMapper.readValue(lastConstArtifactFromTenant.getContent(), ConstitutionOutput.class);
-        } catch (JsonProcessingException e) {
-            throw new PipelineExecutionException("Failed to read constitution artifact json ", e);
-        }
-
-        var input = new ArchitectInput(constitutionOutput, run.getSpec());
-        return input;
+    public ArchitectTasklet(BlacksmithAgent agent, TenantRunRepository runRepository,
+            RunArtifactRepository artifactRepository, TaskExecutionRepository taskRepository,
+            ObjectMapper jsonMapper,InputBuilderRegistry inputBuilderRegistry,BlacksmithUtils utils) {
+        super(agent, runRepository, artifactRepository, taskRepository, jsonMapper, inputBuilderRegistry,utils);
     }
 
     @Override
@@ -102,15 +82,5 @@ public class ArchitectTasklet extends AbstractAgentTasklet{
         }
 
         taskRepository.saveAll(tasks);
-    }
-
-    @Override
-    protected void onSkip(TenantRun run) {
-        var architectArtifact = artifactRepository.findTopByRunTenantIdAndArtifactTypeOrderByCreatedAtDesc(
-                                                    run.getTenant().getId(),ArtifactType.IMPACT_ANALYSIS)
-                                                .orElseThrow(() -> new PipelineExecutionException(
-                                                    "Architect artifact not found for tenant: " + run.getTenant().getId()));
-
-        afterSuccess(run, architectArtifact);        
     }
 }

@@ -14,6 +14,8 @@ public interface RunArtifactRepository extends JpaRepository<RunArtifact, Long> 
 
     List<RunArtifact> findByRun(TenantRun run);
 
+    Optional<RunArtifact> findTopByRunAndArtifactTypeOrderByCreatedAtDesc(TenantRun run, ArtifactType artifactType);
+
     Optional<RunArtifact> findTopByRunTenantIdAndAgentNameOrderByCreatedAtDesc(Long tenantId, AgentName agentName);
     Optional<RunArtifact> findTopByRunTenantIdAndArtifactTypeOrderByCreatedAtDesc(Long tenantId, ArtifactType artifactType);
 }

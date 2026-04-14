@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: blacksmith-db
+    environment:
+      POSTGRES_DB: blacksmith
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - blacksmith_pgdata:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d blacksmith"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  blacksmith_pgdata:

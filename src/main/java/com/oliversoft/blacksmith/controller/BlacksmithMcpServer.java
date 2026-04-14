@@ -15,32 +15,58 @@ import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.oliversoft.blacksmith.agent.BlacksmithAgent;
+import com.oliversoft.blacksmith.exception.InputBuilderException;
+import com.oliversoft.blacksmith.inputbuilder.InputBuilderRegistry;
 import com.oliversoft.blacksmith.model.dto.TenantMCPSummary;
+import com.oliversoft.blacksmith.model.dto.input.AgentInput;
+import com.oliversoft.blacksmith.model.dto.output.AgentOutput;
+import com.oliversoft.blacksmith.model.dto.output.ArchitectOutput;
+import com.oliversoft.blacksmith.model.dto.output.ConstitutionOutput;
+import com.oliversoft.blacksmith.model.dto.output.DeveloperOutput;
+import com.oliversoft.blacksmith.model.entity.RefinementRequest;
 import com.oliversoft.blacksmith.model.entity.Tenant;
 import com.oliversoft.blacksmith.model.entity.TenantRun;
+import com.oliversoft.blacksmith.model.enumeration.AgentName;
+import com.oliversoft.blacksmith.model.enumeration.ArtifactType;
 import com.oliversoft.blacksmith.model.enumeration.IssueType;
 import com.oliversoft.blacksmith.model.enumeration.RunStatus;
+import com.oliversoft.blacksmith.persistence.RefinementRequestRepository;
+import com.oliversoft.blacksmith.persistence.RunArtifactRepository;
 import com.oliversoft.blacksmith.persistence.TenantRepository;
 import com.oliversoft.blacksmith.persistence.TenantRunRepository;
+import com.oliversoft.blacksmith.util.BlacksmithUtils;
 
 @Component
 public class BlacksmithMcpServer {
     
     private static final Logger log = LoggerFactory.getLogger(BlacksmithMcpServer.class);
     
+    private final BlacksmithAgent agent;
     private final JobLauncher jobLauncher;
     private final Job pipelineJob;
     private final TenantRepository tenantRepo;
     private final TenantRunRepository runRepo;
+    private final RunArtifactRepository artifactRepo;
     private final ObjectMapper jsonMapper;
+    private final InputBuilderRegistry registry;
+    private final BlacksmithUtils utils;
+    private final RefinementRequestRepository refinementRepo;
     
     public BlacksmithMcpServer(@Qualifier("asyncJobLauncher") JobLauncher jobLauncher, Job pipelineJob, TenantRepository tenantRepo,
-            TenantRunRepository runRepo, ObjectMapper jsonMapper) {
+            TenantRunRepository runRepo, ObjectMapper jsonMapper, RunArtifactRepository artifactRepo,BlacksmithAgent agent,InputBuilderRegistry registry,
+            BlacksmithUtils utils, RefinementRequestRepository refinementRepo) 
+    {
+        this.agent = agent;
         this.jobLauncher = jobLauncher;
         this.pipelineJob = pipelineJob;
         this.tenantRepo = tenantRepo;
         this.runRepo = runRepo;
         this.jsonMapper = jsonMapper;
+        this.artifactRepo = artifactRepo;
+        this.registry = registry;
+        this.utils = utils;
+        this.refinementRepo = refinementRepo;
     } 
 
     @Tool(description = "Creates a new Blacksmith pipeline run for a tenant. Use this when the user wants to start analysing a codebase or implement a new feature, bug fix or tech debt. The user might want to skip some step and to start by a specific startStep")
@@ -106,5 +132,74 @@ public class BlacksmithMcpServer {
                 return "Error at Serializing Tenant list:" + e.getMessage();
             }
         }
-    } 
+    }
+
+    @Tool(description = "Requests a refinement of an artifact. Returns the changed artifact for user confirmation.")
+    public String refineArtifact(Long artifactId, String feedback) {
+
+        var artifact = artifactRepo.findById(artifactId).orElse(null);
+        if (artifact==null) return "Artifact not found :"+artifactId;
+        
+        var tenant = artifact.getRun().getTenant();
+        var agentName = resolveAgentName(artifact.getArtifactType());
+        var outputClass = resolveOutputClass(agentName);
+        var startStep = resolveStartStep(agentName);
+        
+        AgentInput input;
+        try {
+            input = registry.get(agentName).buildInput(tenant, feedback);
+        } catch (InputBuilderException e) {
+            return "Error in the input building: " + e.getMessage();
+        }
+        
+        var output = this.agent.processInput(input, agentName, outputClass);
+        String jsonOutput;
+        try {
+            jsonOutput = this.jsonMapper.writeValueAsString(output);
+        } catch (JsonProcessingException e) {
+            return "error writing the refinementResult: %s".formatted(e.getMessage());
+        }
+
+        var refinement = RefinementRequest.builder()
+                            .feedback(feedback)
+                            .sourceArtifact(artifact)
+                            .tenant(tenant)
+                            .startStep(startStep)
+                            .refinementResult(jsonOutput)
+                        .build();
+        
+        refinementRepo.save(refinement);
+
+        return jsonOutput;
+    }
+
+    @Tool(description = "Confirms a pending refinement request and starts a new run.")
+    public String confirmRefinement(Long refinementId) {
+        return "nao implementado";
+    }
+
+    private String resolveStartStep(AgentName agentName) {
+        return switch(agentName){
+            case CONSTITUTION -> "CONSTITUTION";
+            case ARCHITECT ->  "ARCHITECT";
+            case DEVELOPER -> "DEVELOPER";
+        };
+    }
+
+    private AgentName resolveAgentName(ArtifactType type){
+        return switch (type) {
+            case CONSTITUTION -> AgentName.CONSTITUTION;
+            case IMPACT_ANALYSIS -> AgentName.ARCHITECT;
+            case CODE -> AgentName.DEVELOPER;
+        };
+    }
+
+    private Class<? extends AgentOutput> resolveOutputClass(AgentName agent){
+        return switch(agent){
+            case CONSTITUTION -> ConstitutionOutput.class;
+            case ARCHITECT -> ArchitectOutput.class;
+            case DEVELOPER -> DeveloperOutput.class;
+        };   
+    }
+
 }

@@ -13,6 +13,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -21,6 +23,7 @@ import lombok.Setter;
 @Table(name = "tenants")
 @Getter @Setter
 @NoArgsConstructor
+@Builder @AllArgsConstructor
 public class Tenant {
     
     @Id
@@ -43,9 +46,6 @@ public class Tenant {
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "git_repos_urls", columnDefinition = "TEXT[]")
     private List<String> gitReposUrls;
-
-    @Column(name="user_id", nullable = false, unique = true)
-    private UUID userId;
 
 
     @Override
