@@ -1,0 +1,61 @@
+{
+  "plan": {
+    "changeTitle": "Add DeepSeek ChatClient Provider Integration",
+    "changeDetail": "Integrate DeepSeek as a new LLM provider in the Blacksmith application. This requires adding the Spring AI DeepSeek dependency, creating a DeepSeekChatClient service, updating the LLM router to support DeepSeek selection, and adding necessary configuration properties. The implementation follows the existing pattern of provider-specific chat clients (Anthropic, OpenAI, MiniMax).",
+    "affectedFiles": [
+      "pom.xml",
+      "src/main/java/com/blacksmith/agent/llm/LlmRouter.java",
+      "src/main/resources/application.yml"
+    ],
+    "newFiles": [
+      "src/main/java/com/blacksmith/agent/llm/DeepSeekChatClient.java",
+      "src/main/java/com/blacksmith/config/DeepSeekProperties.java"
+    ],
+    "dependencies": [
+      "Spring AI DeepSeek Starter",
+      "Spring AI OpenAI (existing)"
+    ],
+    "risks": [
+      "DeepSeek API availability and rate limits",
+      "Model compatibility with existing agent prompts",
+      "Configuration validation for new provider credentials"
+    ]
+  },
+  "plannedTasks": [
+    {
+      "id": "task-1",
+      "description": "Add spring-ai-starter-model-deepseek dependency to pom.xml",
+      "repoUrl": "github:anthropics/blacksmith",
+      "filenamePath": "pom.xml",
+      "dependentTasks": []
+    },
+    {
+      "id": "task-2",
+      "description": "Create DeepSeekProperties configuration class in config package",
+      "repoUrl": "github:anthropics/blacksmith",
+      "filenamePath": "src/main/java/com/blacksmith/config/DeepSeekProperties.java",
+      "dependentTasks": []
+    },
+    {
+      "id": "task-3",
+      "description": "Create DeepSeekChatClient service class implementing LLM chat interface",
+      "repoUrl": "github:anthropics/blacksmith",
+      "filenamePath": "src/main/java/com/blacksmith/agent/llm/DeepSeekChatClient.java",
+      "dependentTasks": ["task-2"]
+    },
+    {
+      "id": "task-4",
+      "description": "Update LlmRouter to include DeepSeek provider option in routing logic",
+      "repoUrl": "github:anthropics/blacksmith",
+      "filenamePath": "src/main/java/com/blacksmith/agent/llm/LlmRouter.java",
+      "dependentTasks": ["task-3"]
+    },
+    {
+      "id": "task-5",
+      "description": "Add DeepSeek configuration properties to application.yml",
+      "repoUrl": "github:anthropics/blacksmith",
+      "filenamePath": "src/main/resources/application.yml",
+      "dependentTasks": ["task-2"]
+    }
+  ]
+}

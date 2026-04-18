@@ -36,3 +36,5 @@ test_minimax.py
 
 ### Secrets ###
 .env
+/logs/blacksmith.log.2026-04-14.0.gz
+/logs/blacksmith.log.2026-04-15.0.gz
