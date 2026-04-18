@@ -52,11 +52,11 @@ specific item previously evaluated.
 
 # Tool Usage Strategy
 1. The input field `localRepoPaths` contains ABSOLUTE filesystem paths where the repos are cloned (e.g. `/tmp/blacksmith/repos/github-com-oliverbill-blacksmith`). ALWAYS use these full absolute paths when calling tools — NEVER use relative paths like `src/...`.
-2. Use `listFiles` to discover structure, passing the full absolute path
+2. Use `listFiles` to discover structure, passing the full absolute path.
 3. **CRITICAL: Never attempt to read a file without first using `listFiles` to verify it exists.** Many common files (package.json, pom.xml, README.md) may NOT exist in all repositories.
-4. If a file you try to read returns "does not exist", immediately use `listFiles` to find what files ARE actually available
+4. If a file you try to read returns "does not exist", immediately use `listFiles` to find what files ARE actually available.
 5. Use `grep` to locate patterns — pass the full absolute path to the file. Only grep files you have confirmed exist.
-6. Use `readFileSection(path, lineNumber-10, lineNumber+10)` to read context around matches
-7. NEVER read entire files — always use grep + readFileSection
-8. Use `readFile` ONLY for files under 5KB (pom.xml, package.json, config files)
+6. Use `readFileSection(path, lineNumber-10, lineNumber+10)` to read context around matches.
+7. NEVER read entire files — always use grep + readFileSection.
+8. Use `readFile` ONLY for files under 5KB (pom.xml, package.json, config files).
 9. **COMMON MISTAKE TO AVOID**: Do NOT assume standard files exist. Always verify with `listFiles` first.

@@ -1,17 +1,5 @@
 package com.oliversoft.blacksmith.batch;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.List;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.batch.core.configuration.annotation.JobScope;
-import org.springframework.batch.repeat.RepeatStatus;
-import org.springframework.stereotype.Component;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.oliversoft.blacksmith.adapter.GitAdapter;
 import com.oliversoft.blacksmith.agent.BlacksmithAgent;
@@ -30,6 +18,17 @@ import com.oliversoft.blacksmith.persistence.RunArtifactRepository;
 import com.oliversoft.blacksmith.persistence.TaskExecutionRepository;
 import com.oliversoft.blacksmith.persistence.TenantRunRepository;
 import com.oliversoft.blacksmith.util.BlacksmithUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.batch.core.configuration.annotation.JobScope;
+import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
 
 @Component
 @JobScope
@@ -41,9 +40,9 @@ public class DeveloperTasklet extends AbstractAgentTasklet{
     
     public DeveloperTasklet(BlacksmithAgent agent, TenantRunRepository runRepository,
             RunArtifactRepository artifactRepository, TaskExecutionRepository taskRepository,
-            ObjectMapper jsonMapper,InputBuilderRegistry inputBuilderRegistry,BlacksmithUtils utils,GitAdapter git) 
+            ObjectMapper jsonMapper,InputBuilderRegistry inputBuilderRegistry,GitAdapter git)
     {
-        super(agent, runRepository, artifactRepository, taskRepository, jsonMapper, inputBuilderRegistry,utils);
+        super(agent, runRepository, artifactRepository, taskRepository, jsonMapper, inputBuilderRegistry);
         this.git = git;
     }
 
@@ -68,17 +67,9 @@ public class DeveloperTasklet extends AbstractAgentTasklet{
     }
 
     @Override
-    protected boolean isOutputValid(AgentOutput output) {
-        DeveloperOutput devOut = (DeveloperOutput) output;
-        boolean hasChanged = devOut.changedFiles() != null && !devOut.changedFiles().isEmpty();
-        boolean hasNew = devOut.newFiles() != null && !devOut.newFiles().isEmpty();
-        return hasChanged || hasNew;
-    }
+    protected void afterSuccess(TenantRun run, RunArtifact artifact, String providerName) {
 
-    @Override
-    protected void afterSuccess(TenantRun run, RunArtifact artifact) {
-
-        DeveloperOutput devOut = (DeveloperOutput)utils.getJsonOutputByArtifact(artifact, getOutputType());
+        DeveloperOutput devOut = (DeveloperOutput) BlacksmithUtils.getJsonOutputByArtifact(artifact, getOutputType());
         var inputBuilder = (DeveloperInputBuilder)inputBuilderRegistry.get(AgentName.DEVELOPER);
         TaskExecution ongoingTask = inputBuilder.getOngoingTaskExecution();
 
@@ -104,6 +95,7 @@ public class DeveloperTasklet extends AbstractAgentTasklet{
             
             // All files written successfully
             ongoingTask.setStatus(TaskStatus.DEV_DONE);
+            ongoingTask.setLlmProvider(providerName);
             taskRepository.save(ongoingTask);
             log.info("Task {} marked as DEV_DONE, {} files written", ongoingTask.getPlannedTaskId(), writtenFiles.size());
             
@@ -163,4 +155,5 @@ public class DeveloperTasklet extends AbstractAgentTasklet{
     protected RepeatStatus getRepeatStatus() {
         return RepeatStatus.CONTINUABLE;
     }
+
 }

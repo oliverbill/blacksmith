@@ -9,6 +9,7 @@ import com.oliversoft.blacksmith.model.dto.input.AgentInput;
 import com.oliversoft.blacksmith.model.dto.input.ArchitectInput;
 import com.oliversoft.blacksmith.model.dto.output.ConstitutionOutput;
 import com.oliversoft.blacksmith.model.entity.Tenant;
+import com.oliversoft.blacksmith.model.entity.TenantRun;
 import com.oliversoft.blacksmith.model.enumeration.ArtifactType;
 import com.oliversoft.blacksmith.persistence.RunArtifactRepository;
 
@@ -16,8 +17,8 @@ import com.oliversoft.blacksmith.persistence.RunArtifactRepository;
 public class ArchitectInputBuilder implements InputBuilderStrategy{
 
     private final RunArtifactRepository artifactRepository;
-    private final ObjectMapper jsonMapper; 
-    
+    private final ObjectMapper jsonMapper;
+
     public ArchitectInputBuilder(RunArtifactRepository artifactRepository, ObjectMapper jsonMapper) {
         this.artifactRepository = artifactRepository;
         this.jsonMapper = jsonMapper;
@@ -25,7 +26,7 @@ public class ArchitectInputBuilder implements InputBuilderStrategy{
 
 
     @Override
-    public AgentInput buildInput(Tenant tenant, String spec) {
+    public AgentInput buildInput(Tenant tenant, TenantRun run, String spec) {
 
         var lastConstArtifactFromTenant = artifactRepository.findTopByRunTenantIdAndArtifactTypeOrderByCreatedAtDesc(
                                                             tenant.getId(),ArtifactType.CONSTITUTION)

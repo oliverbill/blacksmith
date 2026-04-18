@@ -1,11 +1,5 @@
 package com.oliversoft.blacksmith.inputbuilder;
 
-import java.util.List;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
-
 import com.oliversoft.blacksmith.exception.InputBuilderException;
 import com.oliversoft.blacksmith.exception.NoPendingTasksException;
 import com.oliversoft.blacksmith.exception.PipelineExecutionException;
@@ -14,15 +8,24 @@ import com.oliversoft.blacksmith.model.dto.input.DeveloperInput;
 import com.oliversoft.blacksmith.model.dto.output.ArchitectOutput;
 import com.oliversoft.blacksmith.model.dto.output.ArchitectOutput.PlannedTask;
 import com.oliversoft.blacksmith.model.dto.output.ConstitutionOutput;
+import com.oliversoft.blacksmith.model.entity.RunArtifact;
 import com.oliversoft.blacksmith.model.entity.TaskExecution;
 import com.oliversoft.blacksmith.model.entity.Tenant;
+import com.oliversoft.blacksmith.model.entity.TenantRun;
 import com.oliversoft.blacksmith.model.enumeration.AgentName;
 import com.oliversoft.blacksmith.model.enumeration.ArtifactType;
 import com.oliversoft.blacksmith.model.enumeration.TaskStatus;
 import com.oliversoft.blacksmith.persistence.RunArtifactRepository;
 import com.oliversoft.blacksmith.persistence.TaskExecutionRepository;
 import com.oliversoft.blacksmith.util.BlacksmithUtils;
+import lombok.Getter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
+import java.util.List;
+
+@Getter
 @Component
 public class DeveloperInputBuilder implements InputBuilderStrategy{
 
@@ -32,35 +35,41 @@ public class DeveloperInputBuilder implements InputBuilderStrategy{
 
     private final RunArtifactRepository artifactRepo;
     private final TaskExecutionRepository taskRepo;
-    private final BlacksmithUtils utils;
 
-    public DeveloperInputBuilder(RunArtifactRepository artifactRepo, TaskExecutionRepository taskRepo,
-            BlacksmithUtils utils) {
+    public DeveloperInputBuilder(RunArtifactRepository artifactRepo, TaskExecutionRepository taskRepo) {
         this.artifactRepo = artifactRepo;
         this.taskRepo = taskRepo;
-        this.utils = utils;
     }
 
 
     @Override
-    public AgentInput buildInput(Tenant tenant, String spec) throws InputBuilderException{
+    public AgentInput buildInput(Tenant tenant, TenantRun run, String spec) throws InputBuilderException{
 
         try{
             var lastConstitutionFromTenant = artifactRepo.findTopByRunTenantIdAndArtifactTypeOrderByCreatedAtDesc(
                                                                 tenant.getId(),ArtifactType.CONSTITUTION)
                                                         .orElseThrow(() -> new InputBuilderException("Constitution Artifact not found for tenant: " + tenant.getName()));
 
-            ConstitutionOutput constitutionOutputJson = (ConstitutionOutput)this.utils.getJsonOutputByArtifact(lastConstitutionFromTenant, ConstitutionOutput.class);                                                    
+            ConstitutionOutput constitutionOutputJson = (ConstitutionOutput) BlacksmithUtils.getJsonOutputByArtifact(lastConstitutionFromTenant, ConstitutionOutput.class);
 
-            var lastImpactAnalysisFromTenant = artifactRepo.findTopByRunTenantIdAndArtifactTypeOrderByCreatedAtDesc(tenant.getId(), ArtifactType.IMPACT_ANALYSIS)
-                                                        .orElseThrow(() -> new InputBuilderException("Impact Analysis Artifact not found for tenant: " + tenant.getName()));
+            /* 
+                Use the artifact linked to the current run; if it is a skipped copy, 
+                follow sourceResusedArtifact to find the original where the TaskExecutions actually live.
+            */ 
+            RunArtifact impactArtifact = artifactRepo
+                .findTopByRunAndArtifactTypeOrderByCreatedAtDesc(run, ArtifactType.IMPACT_ANALYSIS)
+                .orElseThrow(() -> new InputBuilderException("Impact Analysis Artifact not found for run: " + run.getId()));
 
-            ArchitectOutput architectOutput = (ArchitectOutput)this.utils.getJsonOutputByArtifact(lastImpactAnalysisFromTenant, ArchitectOutput.class);
+            RunArtifact taskOwnerArtifact = impactArtifact.getSourceResusedArtifact() != null
+                ? impactArtifact.getSourceResusedArtifact()
+                : impactArtifact;
+
+            ArchitectOutput architectOutput = (ArchitectOutput) BlacksmithUtils.getJsonOutputByArtifact(taskOwnerArtifact, ArchitectOutput.class);
 
             // get the first PENDING TaskExecution for the artifact => 1 RunArtifact(ArchitectOutput) generates N TaskExecutions
-            TaskExecution taskExecution = this.taskRepo.findFirstByArtifactAndStatus(lastImpactAnalysisFromTenant, TaskStatus.DEV_PENDING)
-                                                        .orElseThrow(() -> 
-                                                            new NoPendingTasksException("TaskExecution not found for impact analysis: " + lastImpactAnalysisFromTenant.getId()));
+            TaskExecution taskExecution = this.taskRepo.findFirstByArtifactAndStatus(taskOwnerArtifact, TaskStatus.DEV_PENDING)
+                                                        .orElseThrow(() ->
+                                                            new NoPendingTasksException("TaskExecution not found for impact analysis: " + taskOwnerArtifact.getId()));
 
             this.ongoingDeveloperTask = taskExecution; // save it to retrieve it on afterSuccess()
             this.allowedRepositoryUrls = tenant.getGitReposUrls();
@@ -94,7 +103,4 @@ public class DeveloperInputBuilder implements InputBuilderStrategy{
         return this.ongoingDeveloperTask;
     }
 
-    public List<String> getAllowedRepositoryUrls(){
-        return this.allowedRepositoryUrls;
-    }
 }

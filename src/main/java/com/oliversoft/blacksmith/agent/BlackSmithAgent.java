@@ -1,25 +1,30 @@
 package com.oliversoft.blacksmith.agent;
 
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.retry.ExhaustedRetryException;
-import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClientResponseException;
-
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.oliversoft.blacksmith.core.ContextBuilder;
 import com.oliversoft.blacksmith.exception.PipelineExecutionException;
 import com.oliversoft.blacksmith.model.dto.input.AgentInput;
+import com.oliversoft.blacksmith.model.dto.output.AgentOutput;
 import com.oliversoft.blacksmith.model.enumeration.AgentName;
 import com.oliversoft.blacksmith.router.LLMRouter;
 import com.oliversoft.blacksmith.router.LLMRouter.RoutedChatClient;
 import com.oliversoft.blacksmith.tool.BashTools;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClientResponseException;
+
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Predicate;
+
+import static com.oliversoft.blacksmith.util.BlacksmithUtils.cleanJson;
+import static com.oliversoft.blacksmith.util.BlacksmithUtils.isOutputValid;
 
 @Component
 public class BlacksmithAgent {
@@ -41,35 +46,25 @@ public class BlacksmithAgent {
         this.jsonMapper = jsonMapper;
     }
 
-    public <O> O processInput(AgentInput input, AgentName agent, Class<O> outputType){
-        
+    public record AgentResult<O>(O output, String providerName) {}
+
+    public <O> AgentResult<O> processInput(AgentInput input, AgentName agent, Class<O> outputType){
+
         log.info("=== processInput START for agent={} ===", agent);
-        
+
         try {
             String systemPrompt = context.getSystemPrompt(agent).orElseThrow(()->new PipelineExecutionException("empty system prompt for agent "+agent));
             String userPrompt = context.buildUserPrompt(input);
 
             List<RoutedChatClient> candidates = this.router.getClientsByPriority(agent);
-            log.info("Found {} LLM candidates for agent {}: {}", candidates.size(), agent, 
+            log.info("Found {} LLM candidates for agent {}: {}", candidates.size(), agent,
                     candidates.stream().map(RoutedChatClient::name).toList());
             if (candidates.isEmpty()) throw new PipelineExecutionException("no LLM clients setup");
-            
+
             List<Throwable> failures = new ArrayList<>();
 
-            for (int i = 0; i < candidates.size(); i++) {
-                RoutedChatClient candidate = candidates.get(i);
-                log.info(">>> TRYING PROVIDER {} for agent {} (provider {}/{}) <<<", 
-                        candidate.name(), agent, i + 1, candidates.size());
-                try {
-                    var result = invoke(candidate.client(), systemPrompt, userPrompt, outputType, agent);
-                    log.info("=== SUCCESS with provider {} for agent {} ===", candidate.name(), agent);
-                    return result;
-                } catch (Exception e) {
-                    failures.add(e);
-                    log.warn("*** Provider {} FAILED for agent {}: {} | type={} ***", 
-                            candidate.name(), agent, e.getMessage(), e.getClass().getSimpleName());
-                }
-            }
+            var result = tryProcessWithAllCandidates(failures, candidates, agent, systemPrompt, userPrompt, outputType);
+            if (result != null) return result;
 
             log.error("=== ALL {} PROVIDERS FAILED for agent {} ===", candidates.size(), agent);
             for (int i = 0; i < failures.size(); i++) {
@@ -85,11 +80,38 @@ public class BlacksmithAgent {
         }
     }
 
-    private <O> O invoke(org.springframework.ai.chat.client.ChatClient client,
-                         String systemPrompt,
-                         String userPrompt,
-                         Class<O> outputType,
-                         AgentName agent) throws JsonProcessingException
+    private <O> AgentResult<O> tryProcessWithAllCandidates(List<Throwable> failures, List<RoutedChatClient> candidates,
+                                                           AgentName agent, String systemPrompt, String userPrompt,
+                                                           Class<O> outputType)
+    {
+        for (int i = 0; i < candidates.size(); i++) {
+                RoutedChatClient candidate = candidates.get(i);
+                log.info(">>> TRYING PROVIDER {} for agent {} (provider {}/{}) <<<",
+                        candidate.name(), agent, i + 1, candidates.size());
+                try {
+                    var result = processAndReturnJson(candidate.client(), systemPrompt, userPrompt, outputType, agent);
+                    if (isOutputValid((AgentOutput) result)) {
+                        log.warn("*** Provider {} returned invalid output for agent {} — trying next provider ***",
+                                candidate.name(), agent);
+                        failures.add(new PipelineExecutionException("Provider " + candidate.name() + " returned invalid output"));
+                        continue;
+                    }
+                    log.info("=== SUCCESS with provider {} for agent {} ===", candidate.name(), agent);
+                    return new AgentResult<>(result, candidate.name());
+                } catch (Exception e) {
+                    failures.add(e);
+                    log.warn("*** Provider {} FAILED for agent {}: {} | type={} ***",
+                            candidate.name(), agent, e.getMessage(), e.getClass().getSimpleName());
+                }
+            }
+        return null;
+    }
+
+    private <O> O processAndReturnJson(ChatClient client,
+                                       String systemPrompt,
+                                       String userPrompt,
+                                       Class<O> outputType,
+                                       AgentName agent) throws JsonProcessingException
     {
         boolean useTools = agent == AgentName.CONSTITUTION || agent == AgentName.DEVELOPER;
         log.info(">>> invoke START for agent={} useTools={}", agent, useTools);
@@ -133,11 +155,14 @@ public class BlacksmithAgent {
             if (cleaned == null || cleaned.isBlank()) {
                 throw new PipelineExecutionException("LLM returned empty response for agent even after follow-up");
             }
+            /* ****************** return json ++************************** */
             try {
                 var result = this.jsonMapper.readValue(cleaned, outputType);
                 log.info(">>> invoke SUCCESS for agent={}", agent);
                 return result;
-            } catch (com.fasterxml.jackson.core.JsonParseException e) {
+            /* ****************** return json ++************************** */
+
+            } catch (JsonParseException e) {
                 log.warn(">>> LLM returned non-JSON response, retrying with JSON reminder. Content preview: {}",
                     cleaned.substring(0, Math.min(100, cleaned.length())));
                 var retryResp = client
@@ -147,31 +172,18 @@ public class BlacksmithAgent {
                             .user("Your previous response was not valid JSON. Return ONLY the raw JSON object. No explanations, no markdown, no text before or after the JSON.")
                         .call()
                         .chatResponse();
+
+                /* ****************** return json ++************************** */
                 var retryContent = retryResp.getResult().getOutput().getText();
                 var retryResult = this.jsonMapper.readValue(cleanJson(retryContent), outputType);
                 log.info(">>> invoke SUCCESS after JSON retry for agent={}", agent);
                 return retryResult;
+                /* ****************** return json ++************************** */
             }
         } catch (Exception e) {
             log.error(">>> invoke EXCEPTION for agent={}: {} | type={}", agent, e.getMessage(), e.getClass().getName());
             throw e;
         }
-    }
-    
-    private String cleanJson(String content) {
-        if (content == null) return "";
-        String cleaned = content
-            .replaceAll("(?s)```json\\s*", "")
-            .replaceAll("(?s)```\\s*", "")
-            .trim();
-        // unwrap single-element array: [{...}] -> {...}
-        if (cleaned.startsWith("[") && cleaned.endsWith("]")) {
-            String inner = cleaned.substring(1, cleaned.length() - 1).trim();
-            if (inner.startsWith("{")) {
-                cleaned = inner;
-            }
-        }
-        return cleaned;
     }
 
     private PipelineExecutionException buildFallbackException(AgentName agent, List<Throwable> failures) {
@@ -195,11 +207,12 @@ public class BlacksmithAgent {
             
             // Check for PipelineExecutionException with invalid output - these should retry on different providers
             if (className.contains("PipelineExecutionException")) {
-                if (message != null && (message.contains("invalid output") 
+                if (message != null && (message.contains("invalid output")
                         || message.contains("returned empty response")
                         || message.contains("returned non-JSON")
                         || message.contains("no generations")
-                        || message.contains("content filtering"))) {
+                        || message.contains("content filtering")))
+                {
                     log.debug("Detected invalid output error that may succeed on different provider: {}", message);
                     return true;
                 }

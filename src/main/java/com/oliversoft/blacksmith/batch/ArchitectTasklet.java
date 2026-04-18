@@ -32,8 +32,8 @@ public class ArchitectTasklet extends AbstractAgentTasklet{
 
     public ArchitectTasklet(BlacksmithAgent agent, TenantRunRepository runRepository,
             RunArtifactRepository artifactRepository, TaskExecutionRepository taskRepository,
-            ObjectMapper jsonMapper,InputBuilderRegistry inputBuilderRegistry,BlacksmithUtils utils) {
-        super(agent, runRepository, artifactRepository, taskRepository, jsonMapper, inputBuilderRegistry,utils);
+            ObjectMapper jsonMapper,InputBuilderRegistry inputBuilderRegistry) {
+        super(agent, runRepository, artifactRepository, taskRepository, jsonMapper, inputBuilderRegistry);
     }
 
     @Override
@@ -55,7 +55,7 @@ public class ArchitectTasklet extends AbstractAgentTasklet{
     }
 
     @Override
-    protected void afterSuccess(TenantRun run, RunArtifact artifact) {
+    protected void afterSuccess(TenantRun run, RunArtifact artifact, String providerName) {
 
         ArchitectOutput output = null;
         try {

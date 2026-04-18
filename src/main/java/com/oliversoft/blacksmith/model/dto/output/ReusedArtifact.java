@@ -4,6 +4,7 @@ import com.oliversoft.blacksmith.model.entity.RunArtifact;
 
 public record ReusedArtifact(
     AgentOutput agentOutput,
-    RunArtifact sourceArtifact
-) 
+    RunArtifact sourceArtifact,
+    String providerName
+)
 {}

@@ -2,8 +2,6 @@ package com.oliversoft.blacksmith.controller;
 
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
-
 
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobExecutionException;
@@ -23,7 +21,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.oliversoft.blacksmith.agent.BlacksmithAgent;
-import com.oliversoft.blacksmith.exception.InputBuilderException;
 import com.oliversoft.blacksmith.inputbuilder.InputBuilderRegistry;
 import com.oliversoft.blacksmith.model.dto.output.AgentOutput;
 import com.oliversoft.blacksmith.model.dto.output.ArchitectOutput;
@@ -45,7 +42,6 @@ import com.oliversoft.blacksmith.persistence.TaskExecutionRepository;
 import com.oliversoft.blacksmith.persistence.TenantRepository;
 import com.oliversoft.blacksmith.persistence.TenantRunRepository;
 import com.oliversoft.blacksmith.service.RetryService;
-import com.oliversoft.blacksmith.util.BlacksmithUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -286,11 +282,16 @@ public class RunRestController {
         }
         try {
             var artifacts = artifactRepo.findByRun(run);
-            // Clear sourceResusedArtifact references to avoid FK constraint violations during deletion
+
+            // 1. delete task_executions that reference any artifact of this run
+            taskExecutionRepo.deleteAll(taskExecutionRepo.findByArtifactIn(artifacts));
+
+            // 2. clear self-references between artifacts (sourceResusedArtifact FK)
             artifacts.forEach(a -> a.setSourceResusedArtifact(null));
             artifactRepo.saveAll(artifacts);
+
+            // 3. delete artifacts, then the run
             artifactRepo.deleteAll(artifacts);
-            taskExecutionRepo.findByArtifactRun(run).forEach(t -> taskExecutionRepo.delete(t));
             runRepo.delete(run);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
@@ -328,7 +329,8 @@ public class RunRestController {
 
         com.oliversoft.blacksmith.model.dto.input.AgentInput input;
         try {
-            input = registry.get(agentName).buildInput(tenant, req.feedback());
+            // nao tem run associada ainda pq precisa de aprovação
+            input = registry.get(agentName).buildInput(tenant, null, req.feedback());
         } catch (com.oliversoft.blacksmith.exception.InputBuilderException e) {
             return ResponseEntity.internalServerError().body("Error building input: " + e.getMessage());
         }

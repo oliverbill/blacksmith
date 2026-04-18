@@ -1,18 +1,5 @@
 package com.oliversoft.blacksmith.controller;
 
-import java.util.ArrayList;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.ai.tool.annotation.Tool;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobExecutionException;
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.JobParametersBuilder;
-import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Component;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.oliversoft.blacksmith.agent.BlacksmithAgent;
@@ -35,7 +22,18 @@ import com.oliversoft.blacksmith.persistence.RefinementRequestRepository;
 import com.oliversoft.blacksmith.persistence.RunArtifactRepository;
 import com.oliversoft.blacksmith.persistence.TenantRepository;
 import com.oliversoft.blacksmith.persistence.TenantRunRepository;
-import com.oliversoft.blacksmith.util.BlacksmithUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.batch.core.Job;
+import org.springframework.batch.core.JobExecutionException;
+import org.springframework.batch.core.JobParameters;
+import org.springframework.batch.core.JobParametersBuilder;
+import org.springframework.batch.core.launch.JobLauncher;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
 
 @Component
 public class BlacksmithMcpServer {
@@ -50,12 +48,12 @@ public class BlacksmithMcpServer {
     private final RunArtifactRepository artifactRepo;
     private final ObjectMapper jsonMapper;
     private final InputBuilderRegistry registry;
-    private final BlacksmithUtils utils;
     private final RefinementRequestRepository refinementRepo;
     
-    public BlacksmithMcpServer(@Qualifier("asyncJobLauncher") JobLauncher jobLauncher, Job pipelineJob, TenantRepository tenantRepo,
-            TenantRunRepository runRepo, ObjectMapper jsonMapper, RunArtifactRepository artifactRepo,BlacksmithAgent agent,InputBuilderRegistry registry,
-            BlacksmithUtils utils, RefinementRequestRepository refinementRepo) 
+    public BlacksmithMcpServer(@Qualifier("asyncJobLauncher") JobLauncher jobLauncher, Job pipelineJob,
+           TenantRepository tenantRepo, TenantRunRepository runRepo, ObjectMapper jsonMapper,
+           RunArtifactRepository artifactRepo,BlacksmithAgent agent,InputBuilderRegistry registry,
+           RefinementRequestRepository refinementRepo)
     {
         this.agent = agent;
         this.jobLauncher = jobLauncher;
@@ -65,7 +63,6 @@ public class BlacksmithMcpServer {
         this.jsonMapper = jsonMapper;
         this.artifactRepo = artifactRepo;
         this.registry = registry;
-        this.utils = utils;
         this.refinementRepo = refinementRepo;
     } 
 
@@ -147,7 +144,7 @@ public class BlacksmithMcpServer {
         
         AgentInput input;
         try {
-            input = registry.get(agentName).buildInput(tenant, feedback);
+            input = registry.get(agentName).buildInput(tenant, null, feedback);
         } catch (InputBuilderException e) {
             return "Error in the input building: " + e.getMessage();
         }

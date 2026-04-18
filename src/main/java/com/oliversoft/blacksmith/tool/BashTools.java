@@ -1,7 +1,6 @@
 package com.oliversoft.blacksmith.tool;
 
 import java.io.IOException;
-import java.nio.file.AccessDeniedException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,7 +27,14 @@ public class BashTools {
         this.repoBaseFolder = Path.of(repoBaseFolder).toAbsolutePath().normalize();
     }
 
-    @Tool(description = "Lists all files recursively in a directory. The path MUST be an absolute path obtained from the localRepoPaths field in the input.")
+    private static final java.util.Set<String> IGNORED_DIRS = java.util.Set.of(
+        ".git", "target", "build", "out", ".idea", ".vscode", "node_modules", "__pycache__", ".gradle"
+    );
+    private static final java.util.Set<String> IGNORED_EXTENSIONS = java.util.Set.of(
+        ".class", ".jar", ".war", ".ear", ".zip", ".tar", ".gz", ".png", ".jpg", ".jpeg", ".gif", ".ico", ".svg"
+    );
+
+    @Tool(description = "Lists source files recursively in a directory, excluding build artifacts and binary files. The path MUST be an absolute path obtained from the localRepoPaths field in the input.")
     public String listFiles(String filePath) {
         var validation = validate(filePath);
         if (validation != null) return validation;
@@ -39,22 +45,24 @@ public class BashTools {
         try {
             Files.walkFileTree(path, new SimpleFileVisitor<>() {
                 @Override
+                public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+                    if (IGNORED_DIRS.contains(dir.getFileName().toString())) {
+                        return FileVisitResult.SKIP_SUBTREE;
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
+                @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                    collected.add(file.toString());
+                    String name = file.getFileName().toString();
+                    String ext = name.contains(".") ? name.substring(name.lastIndexOf('.')) : "";
+                    if (!IGNORED_EXTENSIONS.contains(ext)) {
+                        collected.add(file.toString());
+                    }
                     return FileVisitResult.CONTINUE;
                 }
                 @Override
                 public FileVisitResult visitFileFailed(Path file, IOException exc) {
                     log.debug("Skipping inaccessible path: {}", file);
-                    return FileVisitResult.CONTINUE;
-                }
-                @Override
-                public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
-                    collected.add(dir.toString());
-                    return FileVisitResult.CONTINUE;
-                }
-                @Override
-                public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
                     return FileVisitResult.CONTINUE;
                 }
             });

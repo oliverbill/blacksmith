@@ -1,11 +1,10 @@
 package com.oliversoft.blacksmith.model.dto.output;
 
-import java.util.List;
-
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.Nulls;
 
+import java.util.List;
 
 
 public record ArchitectOutput

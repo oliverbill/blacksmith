@@ -1,11 +1,5 @@
 package com.oliversoft.blacksmith.batch;
 
-import java.util.Optional;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.oliversoft.blacksmith.agent.BlacksmithAgent;
 import com.oliversoft.blacksmith.inputbuilder.InputBuilderRegistry;
@@ -18,7 +12,11 @@ import com.oliversoft.blacksmith.model.enumeration.ArtifactType;
 import com.oliversoft.blacksmith.persistence.RunArtifactRepository;
 import com.oliversoft.blacksmith.persistence.TaskExecutionRepository;
 import com.oliversoft.blacksmith.persistence.TenantRunRepository;
-import com.oliversoft.blacksmith.util.BlacksmithUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+import java.util.Optional;
 
 @Component
 public class ConstitutionTasklet extends AbstractAgentTasklet{
@@ -27,8 +25,8 @@ public class ConstitutionTasklet extends AbstractAgentTasklet{
 
     public ConstitutionTasklet(BlacksmithAgent agent, TenantRunRepository runRepository,
             RunArtifactRepository artifactRepository, TaskExecutionRepository taskRepository,
-            ObjectMapper jsonMapper,InputBuilderRegistry inputBuilderRegistry,BlacksmithUtils utils) {
-        super(agent, runRepository, artifactRepository, taskRepository, jsonMapper, inputBuilderRegistry,utils);
+            ObjectMapper jsonMapper,InputBuilderRegistry inputBuilderRegistry) {
+        super(agent, runRepository, artifactRepository, taskRepository, jsonMapper, inputBuilderRegistry);
     }
 
     @Override
@@ -43,7 +41,7 @@ public class ConstitutionTasklet extends AbstractAgentTasklet{
             .flatMap(artifact -> {
                 try {
                     ConstitutionOutput output = jsonMapper.readValue(artifact.getContent(), ConstitutionOutput.class);
-                    return Optional.of(new ReusedArtifact(output, artifact));
+                    return Optional.of(new ReusedArtifact(output, artifact, null));
                 } catch (Exception e) {
                     log.warn("Failed to deserialize existing constitution, will re-run agent", e);
                     return Optional.empty();

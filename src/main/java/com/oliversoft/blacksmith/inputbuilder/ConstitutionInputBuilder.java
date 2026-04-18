@@ -10,6 +10,7 @@ import com.oliversoft.blacksmith.exception.InputBuilderException;
 import com.oliversoft.blacksmith.model.dto.input.AgentInput;
 import com.oliversoft.blacksmith.model.dto.input.ConstitutionInput;
 import com.oliversoft.blacksmith.model.entity.Tenant;
+import com.oliversoft.blacksmith.model.entity.TenantRun;
 
 @Component
 public class ConstitutionInputBuilder implements InputBuilderStrategy{
@@ -22,7 +23,7 @@ public class ConstitutionInputBuilder implements InputBuilderStrategy{
 
 
     @Override
-    public AgentInput buildInput(Tenant tenant, String spec) throws InputBuilderException{
+    public AgentInput buildInput(Tenant tenant, TenantRun run, String spec) throws InputBuilderException{
         
         List<String> resolvedPaths = getRepoLocalPaths(tenant);
         

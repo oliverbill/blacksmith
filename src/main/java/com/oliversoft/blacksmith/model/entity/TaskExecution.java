@@ -52,6 +52,9 @@ public class TaskExecution {
     @Column(name = "status", nullable = false)
     private TaskStatus status = TaskStatus.DEV_PENDING;
 
+    @Column(name = "llm_provider")
+    private String llmProvider;
+
     @Override
     public int hashCode() {
         return getClass().hashCode();

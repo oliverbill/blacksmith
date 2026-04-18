@@ -75,6 +75,7 @@ CREATE TABLE public.task_executions (
     planned_task_uuid uuid NOT NULL,
     artifact_id       bigint NOT NULL,
     status            task_status NOT NULL,
+    llm_provider      text,
     CONSTRAINT task_executions_artifact_id_fkey FOREIGN KEY (artifact_id) REFERENCES public.run_artifacts(id)
 );
 

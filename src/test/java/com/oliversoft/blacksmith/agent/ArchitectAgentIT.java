@@ -12,16 +12,18 @@ import org.springframework.test.context.ActiveProfiles;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.oliversoft.blacksmith.agent.BlacksmithAgent.AgentResult;
 import com.oliversoft.blacksmith.model.dto.input.ArchitectInput;
 import com.oliversoft.blacksmith.model.dto.output.ArchitectOutput;
 import com.oliversoft.blacksmith.model.dto.output.ConstitutionOutput;
 import com.oliversoft.blacksmith.model.enumeration.AgentName;
+import com.oliversoft.blacksmith.model.dto.output.AgentOutput;
 
 @SpringBootTest
 @ActiveProfiles("test")
 class ArchitectAgentIT {
 
-    private static final Logger log = LoggerFactory.getLogger(BlacksmithAgent.class);
+    private static final Logger log = LoggerFactory.getLogger(ArchitectAgentIT.class);
     
     @Autowired
     private BlacksmithAgent agent;
@@ -29,25 +31,36 @@ class ArchitectAgentIT {
     @Autowired
     private ObjectMapper objectMapper;
 
+
+
     private ConstitutionOutput constitution;
+    private ArchitectOutput architect;
 
     @BeforeEach
     void loadConstitution() throws Exception {
-        var resource = new ClassPathResource("constitution-sample.json");
-        constitution = objectMapper.readValue(resource.getInputStream(), ConstitutionOutput.class);
+        var resource = new ClassPathResource("constitution-output-sample.json");
+        this.constitution = objectMapper.readValue(resource.getInputStream(), ConstitutionOutput.class);
+    }
+
+    void loadArchitect(String json) throws Exception {
+        var resource = new ClassPathResource("architect-output-sample.json");
+        this.architect = objectMapper.readValue(resource.getInputStream(), ArchitectOutput.class);
     }
 
     @Test
     void architectAgent_shouldProducePlannedTasks_forNewFeatureSpec() {
-        var spec = "crie uma nova run para uma nova feature: um novo chatclient para o provider Deepseek.";
+        //var spec = "crie uma nova run para uma nova feature: um novo chatclient para o provider Deepseek.";
+        var spec = "Tirar Dúvidas sobre um artefato";
         var input = new ArchitectInput(constitution, spec);
 
-        ArchitectOutput output = agent.processInput(input, AgentName.ARCHITECT, ArchitectOutput.class);
+        AgentResult<ArchitectOutput> output = agent.processInput(input, AgentName.ARCHITECT, ArchitectOutput.class);
 
         assertThat(output).isNotNull();
-        assertThat(output.plan()).isNotNull();
-        assertThat(output.plan().changeTitle()).isNotBlank();
-        assertThat(output.plannedTasks())
+        
+        ArchitectOutput.ChangeManagementPlan plan = output.output().plan();
+        assertThat(plan).isNotNull();
+        assertThat(plan.changeTitle()).isNotBlank();
+        assertThat(output.output().plannedTasks())
                 .isNotNull()
                 .isNotEmpty()
                 .allSatisfy(task -> {
@@ -57,10 +70,11 @@ class ArchitectAgentIT {
                 });
 
         log.info("=== Change Plan ===");
-        log.info(output.plan().changeTitle());
-        log.info(output.plan().changeDetail());
+        log.info(plan.changeTitle());
+        log.info(plan.changeDetail());
         log.info("\n=== Planned Tasks ===");
-        output.plannedTasks().forEach(t ->
+        output.output().plannedTasks().forEach(t ->
             log.info("[%s] %s → %s%n", t.id(), t.description(), t.filenamePath()));
     }
+
 }

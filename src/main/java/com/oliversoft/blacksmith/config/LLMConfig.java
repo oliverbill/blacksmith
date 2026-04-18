@@ -1,6 +1,5 @@
 package com.oliversoft.blacksmith.config;
 
-import org.springframework.ai.anthropic.AnthropicChatModel;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.minimax.MiniMaxChatModel;
 import org.springframework.ai.openai.OpenAiChatModel;
@@ -18,16 +17,14 @@ public class LLMConfig {
     @Qualifier("openrouter")
     public ChatClient openRouterClient(
         @Value("${spring.ai.openrouter.api-key}") String apiKey,
-        @Value("${spring.ai.openrouter.base-url}") String baseUrl,
-        @Value("${spring.ai.openrouter.chat.options.model}") String model
-    ) 
+        @Value("${spring.ai.openrouter.base-url}") String baseUrl)
     {
         var openAiApi = OpenAiApi.builder()
             .apiKey(apiKey)
             .baseUrl(baseUrl)
             .build();
         
-        var options = OpenAiChatOptions.builder().model(model).build();
+        var options = OpenAiChatOptions.builder().model("x-ai/grok-code-fast-1").build();
         
         var chatModel = OpenAiChatModel.builder()
             .openAiApi(openAiApi)
@@ -38,12 +35,46 @@ public class LLMConfig {
     }
 
     @Bean
-    @Qualifier("anthropic")
-    public ChatClient anthropicClient(AnthropicChatModel model){
+    @Qualifier("openrouter2")
+    public ChatClient openRouterClient2(
+        @Value("${spring.ai.openrouter.api-key}") String apiKey,
+        @Value("${spring.ai.openrouter.base-url}") String baseUrl    ) 
+    {
+        var openAiApi = OpenAiApi.builder()
+            .apiKey(apiKey)
+            .baseUrl(baseUrl)
+            .build();
         
-        return ChatClient.builder(model).build();
+        var options = OpenAiChatOptions.builder().model("qwen/qwen3-coder-next").build();
+        
+        var chatModel = OpenAiChatModel.builder()
+            .openAiApi(openAiApi)
+            .defaultOptions(options)
+            .build();
+
+        return ChatClient.builder(chatModel).build();
     }
 
+    @Bean
+    @Qualifier("openrouter3")
+    public ChatClient openRouterClient3(
+        @Value("${spring.ai.openrouter.api-key}") String apiKey,
+        @Value("${spring.ai.openrouter.base-url}") String baseUrl) 
+    {
+        var openAiApi = OpenAiApi.builder()
+            .apiKey(apiKey)
+            .baseUrl(baseUrl)
+            .build();
+        
+        var options = OpenAiChatOptions.builder().model("openai/gpt-5.1-codex-mini").build();
+        
+        var chatModel = OpenAiChatModel.builder()
+            .openAiApi(openAiApi)
+            .defaultOptions(options)
+            .build();
+
+        return ChatClient.builder(chatModel).build();
+    }
 
     @Bean
     @Qualifier("minimax")

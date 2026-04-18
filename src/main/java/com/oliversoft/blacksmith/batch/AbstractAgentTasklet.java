@@ -1,17 +1,5 @@
 package com.oliversoft.blacksmith.batch;
 
-import java.util.List;
-import java.util.Optional;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.batch.core.ExitStatus;
-import org.springframework.batch.core.StepContribution;
-import org.springframework.batch.core.scope.context.ChunkContext;
-import org.springframework.batch.core.step.tasklet.Tasklet;
-import org.springframework.batch.repeat.RepeatStatus;
-import org.springframework.stereotype.Component;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.oliversoft.blacksmith.agent.BlacksmithAgent;
@@ -29,6 +17,17 @@ import com.oliversoft.blacksmith.persistence.RunArtifactRepository;
 import com.oliversoft.blacksmith.persistence.TaskExecutionRepository;
 import com.oliversoft.blacksmith.persistence.TenantRunRepository;
 import com.oliversoft.blacksmith.util.BlacksmithUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.batch.core.ExitStatus;
+import org.springframework.batch.core.StepContribution;
+import org.springframework.batch.core.scope.context.ChunkContext;
+import org.springframework.batch.core.step.tasklet.Tasklet;
+import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+import java.util.Optional;
 
 @Component
 public abstract class AbstractAgentTasklet implements Tasklet{
@@ -41,18 +40,16 @@ public abstract class AbstractAgentTasklet implements Tasklet{
     protected final TaskExecutionRepository taskRepository;
     protected final ObjectMapper jsonMapper;
     protected final InputBuilderRegistry inputBuilderRegistry;
-    protected final BlacksmithUtils utils;
 
     public AbstractAgentTasklet(BlacksmithAgent agent, TenantRunRepository runRepository,
             RunArtifactRepository artifactRepository, TaskExecutionRepository taskRepository,
-            ObjectMapper jsonMapper,InputBuilderRegistry inputBuilderRegistry,BlacksmithUtils utils) {
+            ObjectMapper jsonMapper,InputBuilderRegistry inputBuilderRegistry) {
         this.agent = agent;
         this.runRepository = runRepository;
         this.artifactRepository = artifactRepository;
         this.taskRepository = taskRepository;
         this.jsonMapper = jsonMapper;
         this.inputBuilderRegistry = inputBuilderRegistry;
-        this.utils = utils;
     }
 
     /**
@@ -90,17 +87,13 @@ public abstract class AbstractAgentTasklet implements Tasklet{
         }
 
         ReusedArtifact reused = callProcessInputWithRetry(run, 2);
-        
+
         if (reused == null) {
             log.error("Agent {} failed after all retry attempts", getAgentName());
             return RepeatStatus.FINISHED;
         }
 
-        if (!isOutputValid(reused.agentOutput())) {
-            throw new PipelineExecutionException("Agent " + getAgentName() + " returned invalid output after all attempts");
-        }
-
-        String jsonOutput = this.utils.toJSON(reused.agentOutput());
+        String jsonOutput = BlacksmithUtils.toJSON(reused.agentOutput());
 
         RunArtifact artifactOutput = RunArtifact.builder()
                                         .run(run)
@@ -112,7 +105,7 @@ public abstract class AbstractAgentTasklet implements Tasklet{
 
         artifactRepository.save(artifactOutput);
 
-        afterSuccess(run, artifactOutput);
+        afterSuccess(run, artifactOutput, reused.providerName());
 
         return getRepeatStatus();
     }
@@ -128,7 +121,7 @@ public abstract class AbstractAgentTasklet implements Tasklet{
             log.info("Reusing existing output for agent {}", getAgentName());
             agentOutput = reusedOutput.get().agentOutput();
             sourceArtifact = reusedOutput.get().sourceArtifact();
-            output = new ReusedArtifact(agentOutput,sourceArtifact);
+            output = new ReusedArtifact(agentOutput, sourceArtifact, null);
         }
         return output;
     }
@@ -140,32 +133,27 @@ public abstract class AbstractAgentTasklet implements Tasklet{
         var alreadySaved = artifactRepository.findTopByRunAndArtifactTypeOrderByCreatedAtDesc(run, getArtifactType());
         if (alreadySaved.isPresent()) {
             log.info("Artifact of type {} already exists for run {} — skipping duplicate save", getArtifactType(), run.getId());
-            afterSuccess(run, alreadySaved.get());
             contribution.setExitStatus(new ExitStatus("SKIP"));
             return RepeatStatus.FINISHED;
         }
-        else
-        {
-            RunArtifact reusedArtifact = artifactRepository
-                .findTopByRunTenantIdAndArtifactTypeOrderByCreatedAtDesc(run.getTenant().getId(), getArtifactType())
-                .orElseThrow(() -> new PipelineExecutionException(
-                    "Cannot skip step " + getAgentName() + ": no previous artifact of type " + getArtifactType() + " found for tenant " + run.getTenant().getId()));
 
-            RunArtifact skippedArtifact = RunArtifact.builder()
-                .run(run)
-                .agentName(getAgentName())
-                .artifactType(getArtifactType())
-                .content(reusedArtifact.getContent())
-                .sourceResusedArtifact(reusedArtifact)
-                .build();
-            artifactRepository.save(skippedArtifact);
-            log.info("Saved reused artifact {} (source: {}) for run {}", skippedArtifact.getId(), reusedArtifact.getId(), run.getId());
+        RunArtifact reusedArtifact = artifactRepository
+            .findTopByRunTenantIdAndArtifactTypeOrderByCreatedAtDesc(run.getTenant().getId(), getArtifactType())
+            .orElseThrow(() -> new PipelineExecutionException(
+                "Cannot skip step " + getAgentName() + ": no previous artifact of type " + getArtifactType() + " found for tenant " + run.getTenant().getId()));
 
-            afterSuccess(run, skippedArtifact);
+        RunArtifact skippedArtifact = RunArtifact.builder()
+            .run(run)
+            .agentName(getAgentName())
+            .artifactType(getArtifactType())
+            .content(reusedArtifact.getContent())
+            .sourceResusedArtifact(reusedArtifact)
+            .build();
+        artifactRepository.save(skippedArtifact);
+        log.info("Saved reused artifact {} (source: {}) for run {}", skippedArtifact.getId(), reusedArtifact.getId(), run.getId());
 
-            contribution.setExitStatus(new ExitStatus("SKIP"));
-            return RepeatStatus.FINISHED;
-        }
+        contribution.setExitStatus(new ExitStatus("SKIP"));
+        return RepeatStatus.FINISHED;
     }
 
     private boolean shouldExitWithSkipStatus(String startStep) {
@@ -183,11 +171,11 @@ public abstract class AbstractAgentTasklet implements Tasklet{
         if (reused == null){
             try {
                 var inputBuilder = inputBuilderRegistry.get(getAgentName());
-                input = inputBuilder.buildInput(run.getTenant(), run.getSpec());
+                input = inputBuilder.buildInput(run.getTenant(), run, run.getSpec());
                 log.info("Input size: {} chars", jsonMapper.writeValueAsString(input).length());
-                var output = agent.processInput(input, getAgentName(), getOutputType());
-                return new ReusedArtifact(output, null); // input built without artifact reuse
-            } 
+                var result = agent.processInput(input, getAgentName(), getOutputType() );
+                return new ReusedArtifact(result.output(), null, result.providerName());
+            }
             catch (JsonProcessingException e) {
                 throw new PipelineExecutionException("jsonOutput is empty for agent "+this.getAgentName());
             } catch (InputBuilderException e) {
@@ -198,7 +186,7 @@ public abstract class AbstractAgentTasklet implements Tasklet{
             return reused;
         }
     }
-    
+
     /**
      * Calls callProcessInput up to maxAttempts times, catching exceptions from the agent.
      * The agent itself tries multiple providers, so each attempt gives another chance
@@ -206,32 +194,32 @@ public abstract class AbstractAgentTasklet implements Tasklet{
      */
     private ReusedArtifact callProcessInputWithRetry(TenantRun run, int maxAttempts) {
         PipelineExecutionException lastException = null;
-        
+
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
                 log.info("Agent {} callProcessInputWithRetry attempt {}/{}", getAgentName(), attempt, maxAttempts);
                 ReusedArtifact result = callProcessInput(run);
-                
-                if (result != null && isOutputValid(result.agentOutput())) {
+
+                if (result != null) {
                     log.info("Agent {} succeeded on attempt {}", getAgentName(), attempt);
                     return result;
                 }
-                
+
                 if (result != null && attempt < maxAttempts) {
                     log.warn("Agent {} returned invalid output on attempt {}, retrying...", getAgentName(), attempt);
                 } else if (result != null) {
                     log.error("Agent {} returned invalid output on final attempt", getAgentName());
                 }
-                
+
             } catch (PipelineExecutionException e) {
                 lastException = e;
                 log.warn("Agent {} failed on attempt {}/{}: {}", getAgentName(), attempt, maxAttempts, e.getMessage());
                 // Always try all attempts - the agent already tried all providers internally
             }
         }
-        
+
         if (lastException != null) {
-            log.error("Agent {} failed after {} attempts, last error: {}", 
+            log.error("Agent {} failed after {} attempts, last error: {}",
                     getAgentName(), maxAttempts, lastException.getMessage());
         }
         return null;
@@ -249,14 +237,10 @@ public abstract class AbstractAgentTasklet implements Tasklet{
         return Optional.empty();
     }
 
-    protected boolean isOutputValid(AgentOutput output) {
-        return true;
-    }
-
     protected boolean allowsDuplicateArtifacts() {
         return false;
     }
 
-    protected void afterSuccess(TenantRun run, RunArtifact output) {}
+    protected void afterSuccess(TenantRun run, RunArtifact output, String providerName) {}
 
 }
