@@ -13,7 +13,6 @@ import com.oliversoft.blacksmith.model.enumeration.ArtifactType;
 import com.oliversoft.blacksmith.persistence.RunArtifactRepository;
 import com.oliversoft.blacksmith.persistence.TaskExecutionRepository;
 import com.oliversoft.blacksmith.persistence.TenantRunRepository;
-import com.oliversoft.blacksmith.util.BlacksmithUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;

@@ -5,7 +5,6 @@ import com.oliversoft.blacksmith.adapter.GitAdapter;
 import com.oliversoft.blacksmith.agent.BlacksmithAgent;
 import com.oliversoft.blacksmith.exception.PipelineExecutionException;
 import com.oliversoft.blacksmith.inputbuilder.InputBuilderRegistry;
-import com.oliversoft.blacksmith.model.dto.output.AgentOutput;
 import com.oliversoft.blacksmith.model.dto.output.DeveloperOutput;
 import com.oliversoft.blacksmith.model.enumeration.AgentName;
 import com.oliversoft.blacksmith.model.enumeration.ArtifactType;

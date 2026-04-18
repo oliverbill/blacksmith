@@ -1,16 +1,15 @@
 package com.oliversoft.blacksmith.inputbuilder;
 
-import java.nio.file.Path;
-import java.util.List;
-
-import org.springframework.stereotype.Component;
-
 import com.oliversoft.blacksmith.adapter.GitAdapter;
 import com.oliversoft.blacksmith.exception.InputBuilderException;
 import com.oliversoft.blacksmith.model.dto.input.AgentInput;
 import com.oliversoft.blacksmith.model.dto.input.ConstitutionInput;
 import com.oliversoft.blacksmith.model.entity.Tenant;
 import com.oliversoft.blacksmith.model.entity.TenantRun;
+import org.springframework.stereotype.Component;
+
+import java.nio.file.Path;
+import java.util.List;
 
 @Component
 public class ConstitutionInputBuilder implements InputBuilderStrategy{

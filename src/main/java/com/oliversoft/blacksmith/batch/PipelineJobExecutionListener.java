@@ -1,15 +1,14 @@
 package com.oliversoft.blacksmith.batch;
 
+import com.oliversoft.blacksmith.model.entity.TenantRun;
+import com.oliversoft.blacksmith.model.enumeration.RunStatus;
+import com.oliversoft.blacksmith.persistence.TenantRunRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobExecutionListener;
 import org.springframework.stereotype.Component;
-
-import com.oliversoft.blacksmith.model.entity.TenantRun;
-import com.oliversoft.blacksmith.model.enumeration.RunStatus;
-import com.oliversoft.blacksmith.persistence.TenantRunRepository;
 
 @Component
 public class PipelineJobExecutionListener implements JobExecutionListener {

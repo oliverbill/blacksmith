@@ -1,5 +1,11 @@
 package com.oliversoft.blacksmith.agent;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.oliversoft.blacksmith.agent.BlacksmithAgent.AgentResult;
+import com.oliversoft.blacksmith.model.dto.input.ArchitectInput;
+import com.oliversoft.blacksmith.model.dto.output.ArchitectOutput;
+import com.oliversoft.blacksmith.model.dto.output.ConstitutionOutput;
+import com.oliversoft.blacksmith.model.enumeration.AgentName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -10,14 +16,6 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.oliversoft.blacksmith.agent.BlacksmithAgent.AgentResult;
-import com.oliversoft.blacksmith.model.dto.input.ArchitectInput;
-import com.oliversoft.blacksmith.model.dto.output.ArchitectOutput;
-import com.oliversoft.blacksmith.model.dto.output.ConstitutionOutput;
-import com.oliversoft.blacksmith.model.enumeration.AgentName;
-import com.oliversoft.blacksmith.model.dto.output.AgentOutput;
 
 @SpringBootTest
 @ActiveProfiles("test")

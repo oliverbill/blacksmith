@@ -1,27 +1,15 @@
 package com.oliversoft.blacksmith.agent;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.oliversoft.blacksmith.core.ContextBuilder;
 import com.oliversoft.blacksmith.exception.PipelineExecutionException;
 import com.oliversoft.blacksmith.model.dto.input.ArchitectInput;
-import com.oliversoft.blacksmith.model.dto.input.DeveloperInput;
 import com.oliversoft.blacksmith.model.dto.output.ArchitectOutput;
-import com.oliversoft.blacksmith.model.dto.output.ConstitutionOutput;
-import com.oliversoft.blacksmith.model.dto.output.DeveloperOutput;
 import com.oliversoft.blacksmith.model.enumeration.AgentName;
 import com.oliversoft.blacksmith.router.LLMRouter;
 import com.oliversoft.blacksmith.tool.BashTools;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.client.RestClientResponseException;
 
 import java.lang.reflect.Method;
@@ -36,7 +24,6 @@ import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for BlacksmithAgent.
- *
  * Tests the fallback/error-detection logic without hitting real LLM providers.
  * End-to-end LLM calls are covered in the nested DeveloperAgentIT class below.
  */

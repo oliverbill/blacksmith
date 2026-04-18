@@ -21,7 +21,6 @@ import org.springframework.web.client.RestClientResponseException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Predicate;
 
 import static com.oliversoft.blacksmith.util.BlacksmithUtils.cleanJson;
 import static com.oliversoft.blacksmith.util.BlacksmithUtils.isOutputValid;

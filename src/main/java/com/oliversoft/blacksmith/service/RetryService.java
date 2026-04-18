@@ -1,8 +1,13 @@
 package com.oliversoft.blacksmith.service;
 
-import java.util.ArrayList;
-import java.util.List;
-
+import com.oliversoft.blacksmith.batch.RetryPipelineJobConfig;
+import com.oliversoft.blacksmith.model.entity.TenantRun;
+import com.oliversoft.blacksmith.model.enumeration.ArtifactType;
+import com.oliversoft.blacksmith.model.enumeration.RunStatus;
+import com.oliversoft.blacksmith.model.enumeration.TaskStatus;
+import com.oliversoft.blacksmith.persistence.RunArtifactRepository;
+import com.oliversoft.blacksmith.persistence.TaskExecutionRepository;
+import com.oliversoft.blacksmith.persistence.TenantRunRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.BatchStatus;
@@ -11,15 +16,8 @@ import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.core.explore.JobExplorer;
 import org.springframework.stereotype.Service;
 
-import com.oliversoft.blacksmith.batch.RetryPipelineJobConfig;
-import com.oliversoft.blacksmith.model.entity.RunArtifact;
-import com.oliversoft.blacksmith.model.entity.TenantRun;
-import com.oliversoft.blacksmith.model.enumeration.ArtifactType;
-import com.oliversoft.blacksmith.model.enumeration.RunStatus;
-import com.oliversoft.blacksmith.model.enumeration.TaskStatus;
-import com.oliversoft.blacksmith.persistence.RunArtifactRepository;
-import com.oliversoft.blacksmith.persistence.TaskExecutionRepository;
-import com.oliversoft.blacksmith.persistence.TenantRunRepository;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class RetryService {

@@ -1,10 +1,10 @@
 package com.oliversoft.blacksmith.model.dto.input;
 
-import java.util.List;
-
 import com.oliversoft.blacksmith.model.dto.output.ArchitectOutput;
 import com.oliversoft.blacksmith.model.dto.output.ArchitectOutput.PlannedTask;
 import com.oliversoft.blacksmith.model.dto.output.ConstitutionOutput;
+
+import java.util.List;
 
 public record DeveloperInput(
     PlannedTask currentOngoingTask,

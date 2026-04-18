@@ -1,13 +1,5 @@
 package com.oliversoft.blacksmith.batch;
 
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.UUID;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.oliversoft.blacksmith.agent.BlacksmithAgent;
@@ -23,7 +15,13 @@ import com.oliversoft.blacksmith.model.enumeration.ArtifactType;
 import com.oliversoft.blacksmith.persistence.RunArtifactRepository;
 import com.oliversoft.blacksmith.persistence.TaskExecutionRepository;
 import com.oliversoft.blacksmith.persistence.TenantRunRepository;
-import com.oliversoft.blacksmith.util.BlacksmithUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.UUID;
 
 @Component
 public class ArchitectTasklet extends AbstractAgentTasklet{

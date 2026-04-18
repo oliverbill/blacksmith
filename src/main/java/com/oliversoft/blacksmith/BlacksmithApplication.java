@@ -1,10 +1,10 @@
 package com.oliversoft.blacksmith;
 
-import java.util.Map;
-
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.PropertySource;
+
+import java.util.Map;
 
 @SpringBootApplication
 @PropertySource(value = "file:.env", ignoreResourceNotFound = true)

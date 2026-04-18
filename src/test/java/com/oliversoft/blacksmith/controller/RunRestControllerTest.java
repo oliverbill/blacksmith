@@ -10,11 +10,7 @@ import com.oliversoft.blacksmith.model.enumeration.AgentName;
 import com.oliversoft.blacksmith.model.enumeration.ArtifactType;
 import com.oliversoft.blacksmith.model.enumeration.IssueType;
 import com.oliversoft.blacksmith.model.enumeration.RunStatus;
-import com.oliversoft.blacksmith.persistence.RefinementRequestRepository;
-import com.oliversoft.blacksmith.persistence.RunArtifactRepository;
-import com.oliversoft.blacksmith.persistence.TaskExecutionRepository;
-import com.oliversoft.blacksmith.persistence.TenantRepository;
-import com.oliversoft.blacksmith.persistence.TenantRunRepository;
+import com.oliversoft.blacksmith.persistence.*;
 import com.oliversoft.blacksmith.service.RetryService;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.core.Job;
@@ -23,23 +19,17 @@ import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(RunRestController.class)
 class RunRestControllerTest {
@@ -47,18 +37,18 @@ class RunRestControllerTest {
     @Autowired MockMvc mockMvc;
     @Autowired ObjectMapper objectMapper;
 
-    @MockBean TenantRunRepository runRepo;
-    @MockBean RunArtifactRepository artifactRepo;
-    @MockBean TaskExecutionRepository taskExecutionRepo;
-    @MockBean TenantRepository tenantRepo;
-    @MockBean(name = "asyncJobLauncher") JobLauncher jobLauncher;
-    @MockBean(name = "pipelineJob") Job pipelineJob;
-    @MockBean RefinementRequestRepository refinementRepo;
-    @MockBean BlacksmithAgent agent;
-    @MockBean InputBuilderRegistry registry;
-    @MockBean JobOperator jobOperator;
-    @MockBean JobExplorer jobExplorer;
-    @MockBean RetryService retryService;
+    @MockitoBean TenantRunRepository runRepo;
+    @MockitoBean RunArtifactRepository artifactRepo;
+    @MockitoBean TaskExecutionRepository taskExecutionRepo;
+    @MockitoBean TenantRepository tenantRepo;
+    @MockitoBean(name = "asyncJobLauncher") JobLauncher jobLauncher;
+    @MockitoBean(name = "pipelineJob") Job pipelineJob;
+    @MockitoBean RefinementRequestRepository refinementRepo;
+    @MockitoBean BlacksmithAgent agent;
+    @MockitoBean InputBuilderRegistry registry;
+    @MockitoBean JobOperator jobOperator;
+    @MockitoBean JobExplorer jobExplorer;
+    @MockitoBean RetryService retryService;
 
     // ── GET /api/tenants ──────────────────────────────────────────────────────
 

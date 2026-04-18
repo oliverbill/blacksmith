@@ -1,10 +1,9 @@
 package com.oliversoft.blacksmith.persistence;
 
-import java.util.List;
-
+import com.oliversoft.blacksmith.model.entity.Tenant;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.oliversoft.blacksmith.model.entity.Tenant;
+import java.util.List;
 
 public interface TenantRepository extends JpaRepository<Tenant, Long> {
 
