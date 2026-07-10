@@ -91,6 +91,12 @@ There are already ≥5 PT-native "AI receptionist" tools (Voxial, VoiceFleet, At
 > 🇬🇧 "If a service answered the calls automatically — what would it *have* to be able to do? Is booking a callback enough, or does it need to actually understand policies and claims (sinistros)?"
 > **Why:** if "booking a callback is fine," a generic tool already wins and you have no wedge. If "it has to handle a sinistro properly," that's your opening. Also listen for *"já uso o X"* — if they name a competitor, that's gold, ask what they hate about it.
 
+### Q5 — Channel test (critical: every vertical competitor chose text, not voice)
+Panora, Foliume, and virtualworkforce.ai all built for brokers on WhatsApp/email, not voice. Find out if you're betting on the wrong channel *before* you build:
+> 🇵🇹 *"Quando um cliente não o consegue apanhar, o que é que ele prefere? Que alguém atenda mesmo o telefone, ou resolver por WhatsApp / mensagem?"*
+> 🇬🇧 "When a client can't reach you — what do they actually prefer? Someone to *answer the phone*, or to sort it on *WhatsApp / message*?"
+> **Why:** if brokers say "os meus clientes vivem no WhatsApp," your voice-first thesis is in trouble and you should know now. If they say "no sinistro, querem falar com uma pessoa," voice wins for the urgent moment. Listen for *which situations* need voice (claims/urgency) vs text (admin/documents).
+
 ### Close (opens a pilot without pitching)
 > 🇵🇹 *"Isto foi muito útil. Posso voltar a contactá-lo se descobrir alguma coisa que ajude com este problema das chamadas?"*
 > 🇬🇧 "This was really helpful. Can I come back to you if I find something that helps with the missed-calls problem?"
@@ -147,6 +153,25 @@ Best-effort from public sources (directories + broker sites). "Verified" = quote
 | Agente SS — Sociedade de Mediação de Seguros | Porto | — | — | — |
 
 **Data-quality caveats:** Phone-only Lisbon entries (F2F, Molinari, AVMS, Serenitas, Temposeguro, Meu Seguro, José Mata) are medium-confidence — numbers consistent across directories but emails unconfirmed. Porto side is thinner (5 vs 14); the **APROSE member directory** and the **ASF "Entidades Autorizadas" register** are the authoritative next step to confirm registrations and expand Porto. Large/multinational brokers (MDS, Marsh, Aon) were deliberately excluded to match the SMB wedge.
+
+---
+
+## Parallel track — talk to the rails-owners (Mudey / Gemese)
+
+**Why this is separate:** the competitive teardown found your biggest threat isn't the horizontal voicebots — it's the broker-management software brokers already run on. **Mudey/MudeyPro** and **Milenia/Gemese** (~300 mediadores) own the rails. If either adds a voice layer, they beat any standalone. So you need to know: **partner or compete?** This is a different conversation than broker discovery — you're talking to a platform vendor, not a customer.
+
+**Who to reach:** Mudey (mudey.pt / MudeyPro), Milenia (Gemese software). Aim for someone in product/partnerships, not sales.
+
+**What you're trying to learn (don't tip your hand):**
+1. *"Estão a trabalhar em atendimento automático / IA de voz para os mediadores que usam a vossa plataforma?"* — Are they already building voice? (If yes, the standalone play is much harder.)
+2. *"A vossa plataforma permite integrações de terceiros? Como funciona?"* — Do they have an API / partner program you could integrate with? (If open → you can build *on* the rails instead of against them.)
+3. *"Quantos mediadores usam a plataforma, e que tipo — pequenos independentes ou grandes?"* — Sizing the rails and whether your SMB target overlaps.
+
+**Decision this informs:**
+- **Rails are open + no voice plans →** build the voice layer *on top of* MudeyPro/Gemese. Integration becomes your moat, not your obstacle.
+- **Rails are closed / they're building voice themselves →** you're competing with an incumbent that owns the broker's back office. Much harder. Reconsider the wedge, or find the brokers *not* on those platforms.
+
+**Sequencing:** do this **after** 2-3 broker calls (so you speak their language and know the pain), but **before** you write a line of code — it can change the entire architecture.
 
 ---
 
