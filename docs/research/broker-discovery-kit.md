@@ -97,6 +97,12 @@ Panora, Foliume, and virtualworkforce.ai all built for brokers on WhatsApp/email
 > 🇬🇧 "When a client can't reach you — what do they actually prefer? Someone to *answer the phone*, or to sort it on *WhatsApp / message*?"
 > **Why:** if brokers say "os meus clientes vivem no WhatsApp," your voice-first thesis is in trouble and you should know now. If they say "no sinistro, querem falar com uma pessoa," voice wins for the urgent moment. Listen for *which situations* need voice (claims/urgency) vs text (admin/documents).
 
+### Q6 — AI acceptance (quick probe; MudeyPro markets "no AI" — sentiment may be a headwind)
+A major PT broker-software vendor explicitly advertises no-AI. Test whether brokers/clients are AI-averse here:
+> 🇵🇹 *"E se fosse um assistente automático, com IA, a atender essas chamadas — o que é que achava disso? E os seus clientes, como reagiriam?"*
+> 🇬🇧 "And if it were an automated, AI assistant answering those calls — how would you feel about that? And your clients — how would they react?"
+> **Why:** if the reaction is "os meus clientes odiariam falar com um robô," you have an adoption headwind and the pitch must lead with disclosure + "humano quando é preciso." If they're open, the no-AI positioning of others is a gap you can exploit. Either way, you need to know the market's AI temperature.
+
 ### Close (opens a pilot without pitching)
 > 🇵🇹 *"Isto foi muito útil. Posso voltar a contactá-lo se descobrir alguma coisa que ajude com este problema das chamadas?"*
 > 🇬🇧 "This was really helpful. Can I come back to you if I find something that helps with the missed-calls problem?"
@@ -170,6 +176,8 @@ Best-effort from public sources (directories + broker sites). "Verified" = quote
 **Decision this informs:**
 - **Rails are open + no voice plans →** build the voice layer *on top of* MudeyPro/Gemese. Integration becomes your moat, not your obstacle.
 - **Rails are closed / they're building voice themselves →** you're competing with an incumbent that owns the broker's back office. Much harder. Reconsider the wedge, or find the brokers *not* on those platforms.
+
+**Update (2026-07): MudeyPro explicitly markets that it does NOT use AI.** Good news — they are not building a competing voice layer, so the "eat you" threat drops and the integration path is more open. But the *positioning* is a warning: a rails-owner advertising "no AI" may be reading its brokers as AI-skeptical. **Verify the scope of their claim** — blanket "somos humanos, sem IA" (a real adoption headwind) vs a narrow "não usamos IA para subscrição/aconselhamento" (just IDD/advice-liability prudence, neutral for a phone-answering agent). This directly feeds Q6 in the script above.
 
 **Sequencing:** do this **after** 2-3 broker calls (so you speak their language and know the pain), but **before** you write a line of code — it can change the entire architecture.
 
