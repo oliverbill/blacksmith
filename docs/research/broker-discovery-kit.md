@@ -94,11 +94,11 @@ Most brokers have never done this calculation. Doing it for them makes the invis
 > 🇬🇧 "Who answers the phones today — someone in the office, a call center? What does that cost you?"
 > **Probes:** How many people? When are they overwhelmed? What happens when everyone's on a call?
 
-### Q4 — Wedge test (ask late, after rapport; the market is crowded)
-There are already ≥5 PT-native "AI receptionist" tools (Voxial, VoiceFleet, Atendia, BrightAI). So test whether *generic* is good enough or whether insurance depth matters:
-> 🇵🇹 *"Se houvesse um serviço que atendesse as chamadas automaticamente, o que é que ele teria mesmo de saber fazer? Bastava marcar um retorno, ou tinha de perceber de apólices e sinistros?"*
-> 🇬🇧 "If a service answered the calls automatically — what would it *have* to be able to do? Is booking a callback enough, or does it need to actually understand policies and claims (sinistros)?"
-> **Why:** if "booking a callback is fine," a generic tool already wins and you have no wedge. If "it has to handle a sinistro properly," that's your opening. Also listen for *"já uso o X"* — if they name a competitor, that's gold, ask what they hate about it.
+### Q4 — Autonomy / trust boundary (ask late, after rapport)
+Your product bet is that the agent handles complex calls (new policies, claims), not just callbacks — that vertical depth is the moat. But brokers may not *let* an AI near their most sensitive calls, and a new policy is IDD-regulated advice. Find where they draw the line:
+> 🇵🇹 *"Imagine que tinha um assistente a atender essas chamadas. Numa coisa simples — o estado de um sinistro, uma dúvida sobre a apólice — deixava-o resolver sozinho? E numa apólice nova, ou na abertura de um sinistro, preferia que ele tratasse de tudo, ou que recolhesse bem a informação e lhe passasse a si?"*
+> 🇬🇧 "Imagine an assistant answering these calls. For something simple — a claim status, a policy question — would you let it resolve it alone? And for a new policy, or opening a claim, would you want it to handle everything, or gather the info properly and pass it to you?"
+> **Why:** this finds the trust boundary AND the regulated line. If brokers won't let an AI advise/sell a new policy (IDD liability sits with them) or handle a raw claim, your wedge is "capture perfectly + hand off," not "autonomous complex handling" — lower-risk and fits augment-not-replace. If they're comfortable with full autonomy, your depth bet is validated. Also listen for *"já uso o X"* — a named competitor is gold; ask what they hate about it.
 
 ### Q5 — Channel test (critical: every vertical competitor chose text, not voice)
 Panora, Foliume, and virtualworkforce.ai all built for brokers on WhatsApp/email, not voice. Find out if you're betting on the wrong channel *before* you build:
