@@ -75,10 +75,19 @@ Ask, then stay silent. The gold is in the pause.
 > 🇬🇧 "When a call comes in after 6pm, or during lunch — what actually happens to it?"
 > **Probes:** Who picks up? Voicemail nobody checks? Rings out? *When was the last time that happened?*
 
-### Q2 — The missed-call number (the refuted figure — get the real one)
-> 🇵🇹 *"Numa semana normal, quantas chamadas acha que ficam sem resposta? E quando perde a chamada de um cliente novo, quanto é que isso vale, mais ou menos?"*
-> 🇬🇧 "In a normal week, how many calls go unanswered? And when you miss a new client's call — roughly what's that worth to you?"
-> **Probes:** Push gently for a number. "Lembra-se da última apólice que perdeu assim?" A specific lost deal beats an average.
+### Q2 — Reconstruct the missed-call number (do NOT ask for it directly)
+A missed call is invisible by definition — the broker can't know what they didn't answer, so "what's a missed call worth?" gets a guess (that's why the $300-500 figure got refuted). Build it from parts they *do* know:
+> 🇵🇹 *"Quantos clientes NOVOS lhe ligam por semana, mais ou menos?"* → new-client call volume
+> 🇵🇹 *"Desses, quantos é que acabam mesmo por fazer uma apólice?"* → close rate
+> 🇵🇹 *"Quanto vale, em média, uma apólice nova para si — em comissão?"* → avg commission
+> 🇵🇹 *"Consegue ver no seu sistema telefónico quantas chamadas ficam sem atender, sobretudo fora de horas?"* → pull missed/after-hours from their PBX logs if they have them
+
+Then do the math **out loud** and reflect it back:
+> 🇵🇹 *"Então, se são ~X chamadas de novos clientes por semana, fecha uns Y%, a ~Z€ cada... são uns €___ por ano em chamadas que nunca chegam a si. Faz sentido?"*
+
+Most brokers have never done this calculation. Doing it for them makes the invisible pain concrete — that's discovery and a soft pitch at once.
+
+**Gold standard — measure it (the 2-week call audit):** offer to forward their after-hours / overflow line to a capture number for two weeks, then count and characterize the calls (new vs existing, urgent vs admin). Converts "nobody knows" into real data, and it's a natural foot-in-the-door pilot — you deliver value before selling anything. Whoever quantifies this number manufactures the urgency *and* owns data no competitor has.
 
 ### Q3 — Who answers today (status quo cost + budget)
 > 🇵🇹 *"Quem atende o telefone hoje em dia? É alguém aqui no escritório, é um call center? Quanto é que isso vos custa?"*
