@@ -85,6 +85,12 @@ Ask, then stay silent. The gold is in the pause.
 > 🇬🇧 "Who answers the phones today — someone in the office, a call center? What does that cost you?"
 > **Probes:** How many people? When are they overwhelmed? What happens when everyone's on a call?
 
+### Q4 — Wedge test (ask late, after rapport; the market is crowded)
+There are already ≥5 PT-native "AI receptionist" tools (Voxial, VoiceFleet, Atendia, BrightAI). So test whether *generic* is good enough or whether insurance depth matters:
+> 🇵🇹 *"Se houvesse um serviço que atendesse as chamadas automaticamente, o que é que ele teria mesmo de saber fazer? Bastava marcar um retorno, ou tinha de perceber de apólices e sinistros?"*
+> 🇬🇧 "If a service answered the calls automatically — what would it *have* to be able to do? Is booking a callback enough, or does it need to actually understand policies and claims (sinistros)?"
+> **Why:** if "booking a callback is fine," a generic tool already wins and you have no wedge. If "it has to handle a sinistro properly," that's your opening. Also listen for *"já uso o X"* — if they name a competitor, that's gold, ask what they hate about it.
+
 ### Close (opens a pilot without pitching)
 > 🇵🇹 *"Isto foi muito útil. Posso voltar a contactá-lo se descobrir alguma coisa que ajude com este problema das chamadas?"*
 > 🇬🇧 "This was really helpful. Can I come back to you if I find something that helps with the missed-calls problem?"
