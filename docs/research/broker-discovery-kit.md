@@ -179,7 +179,19 @@ Best-effort from public sources (directories + broker sites). "Verified" = quote
 
 **Update (2026-07): MudeyPro explicitly markets that it does NOT use AI.** Good news — they are not building a competing voice layer, so the "eat you" threat drops and the integration path is more open. But the *positioning* is a warning: a rails-owner advertising "no AI" may be reading its brokers as AI-skeptical. **Verify the scope of their claim** — blanket "somos humanos, sem IA" (a real adoption headwind) vs a narrow "não usamos IA para subscrição/aconselhamento" (just IDD/advice-liability prudence, neutral for a phone-answering agent). This directly feeds Q6 in the script above.
 
+**Resolved (exact wording):** Mudey's tagline is *"Juntamos o melhor do digital, com um suporte especializado prestado pelos nossos consultores, inteligentes mas não artificiais 😜"* — a marketing pun on *inteligência artificial*, with a wink. So it's **brand messaging, not compliance, and not a serious anti-AI stance** — and it's Mudey's *consumer-facing* brand ("human advisors"), not evidence brokers reject AI in their back office. Takeaway: the risk is **messaging/adoption, not demand.**
+
 **Sequencing:** do this **after** 2-3 broker calls (so you speak their language and know the pain), but **before** you write a line of code — it can change the entire architecture.
+
+---
+
+## Positioning rules (how to talk about the product)
+
+In PT insurance, "human, personal, not robotic" is a selling point (Mudey brags about it). Two rules this forces on the pitch:
+
+1. **Augment the human, never replace them.** The broker's identity is the personal relationship ("médico de família"). Sell the safety net for calls the human *can't* take (after-hours, lunch, overflow), not a robot instead of the broker. Core line:
+   > 🇵🇹 *"O seu cliente é sempre atendido — mesmo quando você não pode."*
+2. **Never lead with "AI voice agent."** Lead with the outcome (*nunca perca um cliente*), then the human handoff (*"passa para si sempre que é preciso"*), then AI disclosure (required by EU AI Act anyway). Match the market's human-first register; don't fight it.
 
 ---
 
