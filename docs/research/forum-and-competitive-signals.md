@@ -90,6 +90,41 @@ So the discovery calls now have a second job: not just "do you miss calls?" but 
 
 ---
 
+---
+
+## Competitive teardown (2026-07-10) — is the insurance niche actually open?
+
+Tested the thesis "the horizontal players aren't deep in insurance, so the niche is open." Result: **half right.**
+
+**Thesis A — PT horizontals are shallow in insurance: CONFIRMED.**
+BrightAI, Voxial, Atendia, Azon, Atenderia, IA Hoje are all unambiguously horizontal. Voxial literally sells "em todos os setores." **Zero** surface insurance, mediadores, sinistros, apólices, broker-software integrations, or a single named insurance customer. Integrations are generic (Calendly, HubSpot, Sheets, Twilio). On the PT-local axis, the insurance-broker vertical is **genuinely unoccupied.** (Snippet-sourced — all PT sites 403; verify manually.)
+
+**Thesis B — the niche is blue ocean: FALSE. It's a narrow, contested corridor.**
+The European insurance-AI space is heating up in 2025-26, and the real competition is NOT the PT horizontals:
+| Player | What they are | Threat level |
+|---|---|---|
+| **Mudey / MudeyPro**, **Milenia / Gemese** (~300 mediadores) | The PT broker-management software that owns the rails | **Highest** — if they add a voice layer, they beat any standalone |
+| **Eleos** (London + **Lisbon team**) | Insurance voice agent (captive carrier), ~$4M seed, Indico (Lisbon) | High — closest tech + Iberian roots |
+| **Foliume** (Spain/Iberia) | AI assistant for brokers ("Wilfredo"), WhatsApp-first | High — broker-vertical, next door |
+| **GetVocal** (Paris, $26M) | Names insurance as a target sector, EU-AI-Act-governed | Medium — enterprise, no pre-built insurance module |
+| **MarvelX** ($6M, EQT) | Insurer claims back-office, not broker front-desk | Low-Medium — different buyer |
+| **Panora** (France, $5M), **virtualworkforce.ai** | Broker-ops AI, text/email | Low for PT — wrong geo/channel |
+
+**The exact 4-cell wedge — voice-first + PT mediadores + European Portuguese + broker-software integration — is still unoccupied.** But it's a corridor, not an ocean.
+
+**Moat reality (the important part):**
+- **Copyable in a weekend (NOT a moat):** a voice agent + insurance FAQ + "seguros" landing page. Voxial/Atendia/GetVocal could ship this trivially. Voice quality and "insurance words" are table stakes, not defensibility.
+- **Hard to copy (the real moat), most durable first:**
+  1. **Owning the mediador distribution channel** — thousands of small ASF-registered brokers, APROSE relationships, trust. Own the channel, not the tech.
+  2. **Certified integration into PT broker back-office** (MudeyPro, Gemese) — policy/recibos/carteira lookup, quote-to-bind. Slow, relationship-gated; horizontals won't do it for one vertical.
+  3. **IDD/ASF-native claims & advice workflows** — correct sinistro fields, advice constraints, consent/recording. Domain knowledge + liability, not prompt engineering.
+
+**Net:** defensible against horizontals (they won't do vertical grunt-work), but **directly contestable by whoever owns the rails** — Mudey/MudeyPro or Milenia/Gemese adding voice is a bigger threat than any voicebot.
+
+**⚠️ The signal that should give you pause:** every vertical *broker* peer — Panora, Foliume, virtualworkforce.ai — chose **text / WhatsApp / email, NOT voice.** Three independent teams betting against voice-first for brokers is data. Understand *why* before you commit to voice.
+
+---
+
 ## Honest gaps / next steps
 - **Verify quotes in-browser** — all sourced from search snippets (403 walls).
 - **Get inside the private FB groups** — logged-in search for "mediadores de seguros Portugal"; that's the missing peer-discussion layer.
