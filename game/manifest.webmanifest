@@ -1,0 +1,19 @@
+{
+  "name": "Mongo e Drongo — Corrida Maluca",
+  "short_name": "Corrida Maluca",
+  "description": "Jogo Mongo e Drongo — Corrida Maluca",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "./icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
