@@ -27,6 +27,20 @@ python3 -m http.server 8000   # ou: npx serve
 |---------|----------------------|------------------|
 | Mover   | ← / →                | Botões ◀ ▶       |
 | Pular   | ↑ ou Barra de espaço | Botão ▲          |
+| Atirar 🔥 | F ou X             | Botão 🔥 (aparece com a flor de fogo) |
+
+## Power-ups (estilo Mario)
+
+Espalhados pelas fases, dão novos poderes ao personagem (mostrados no HUD "Poder"):
+
+- 🍄 **Cogumelo** — faz o personagem **crescer** e **pular mais alto**.
+- 🔥 **Flor de fogo** — permite **atirar bolas de fogo** (F / X ou o botão 🔥) que
+  derrotam inimigos à distância.
+- 🪽 **Flor voadora** — permite **voar**: segure o botão de pular para subir.
+
+Ao tomar dano com um poder ativo, o personagem **perde o poder** em vez de morrer
+(fica invulnerável por um instante). O poder é mantido entre as fases e salvo no
+progresso.
 
 Segure o botão de pulo para pular mais alto (altura variável).
 

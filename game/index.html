@@ -74,6 +74,9 @@
     display:flex; align-items:center; justify-content:center;
   }
   .tbtn:active { background:rgba(255,255,255,.4); }
+  #btnFire { background:rgba(255,120,40,.4); border-color:rgba(255,180,120,.7); }
+  #btnFire.hidden { display:none; }
+  #powerBox { transition:background .2s; }
   .hint { font-size:12px; opacity:.7; }
   .btnRow { display:flex; gap:14px; flex-wrap:wrap; justify-content:center; }
   #continueBtn { background:linear-gradient(#8ff0a4,#39c463); box-shadow:0 5px 0 #1f8a41; color:#093018; }
@@ -100,6 +103,7 @@
   <div id="hud">
     <span class="box">🍎 <span id="score">0</span></span>
     <span class="box">Fase <span id="level">1</span></span>
+    <span class="box" id="powerBox">Poder <span id="power">—</span></span>
     <span class="box">❤ <span id="lives">3</span></span>
   </div>
 
@@ -126,7 +130,8 @@
       <button class="btn" id="continueBtn">⏵ Continuar</button>
       <button class="btn" id="startBtn">▶ Novo jogo</button>
     </div>
-    <p class="hint">← → mover · ↑ / Espaço pular · (ou use os botões na tela)</p>
+    <p class="hint">← → mover · ↑ / Espaço pular · F / X atirar 🔥 · (ou use os botões na tela)</p>
+    <p class="hint">🍄 cresce e pula mais alto · 🔥 atira fogo · 🪽 voa (segure pular)</p>
   </div>
 
   <!-- Message overlay (win/lose/level) -->
@@ -143,6 +148,7 @@
       <div class="tbtn" id="btnRight">▶</div>
     </div>
     <div class="pad right">
+      <div class="tbtn" id="btnFire">🔥</div>
       <div class="tbtn" id="btnJump">▲</div>
     </div>
   </div>

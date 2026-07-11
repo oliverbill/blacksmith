@@ -14,6 +14,9 @@
   const $score = document.getElementById("score");
   const $level = document.getElementById("level");
   const $lives = document.getElementById("lives");
+  const $power = document.getElementById("power");
+  const $powerBox = document.getElementById("powerBox");
+  const $btnFire = document.getElementById("btnFire");
 
   // ---- Screens ----
   const startScreen = document.getElementById("startScreen");
@@ -56,8 +59,15 @@
   const MOVE      = 0.8;
   const FRICTION  = 0.82;
   const MAX_VX    = 4.6;
-  const JUMP_VY   = -12.4;
+  const JUMP_VY      = -12.4;   // pulo normal
+  const POWER_JUMP   = -14.6;   // pulo mais alto quando com power-up (cogumelo etc.)
+  const FLY_THRUST   = 0.95;    // empuxo por quadro ao voar (segurando pular)
+  const FLY_MAX_UP   = -6.5;    // velocidade máxima de subida ao voar
+  const FIRE_COOLDOWN = 16;     // quadros entre tiros de fogo
   const TILE      = 40;
+
+  // tamanhos do jogador conforme o poder
+  function sizeFor(power) { return power === "small" ? { w:30, h:38 } : { w:40, h:52 }; }
 
   // ============================================================
   //  LEVELS  (tile maps)
@@ -65,6 +75,9 @@
   //   . empty     G ground     B brick/platform
   //   ? coin      E enemy       F flag (goal)
   //   P player start
+  //   M cogumelo (cresce + pula mais alto)
+  //   R flor de fogo (atira bolas de fogo)
+  //   V flor voadora (permite voar)
   // ============================================================
   const LEVELS = [
 `................................................................................
@@ -99,6 +112,20 @@ GGGGGGGGGGGGGGGGGG....GGGGGGGGGGGGGGG..GGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGG
 GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGGGG`,
   ];
 
+  // Posições dos power-ups por fase (em coordenadas de tile: col, row),
+  // colocadas sobre chão sólido. Desacoplado do desenho ASCII acima.
+  const POWERUPS_BY_LEVEL = [
+    [ {type:"mushroom", col:6,  row:8}, {type:"fire", col:46, row:8}, {type:"fly", col:72, row:8} ],
+    [ {type:"mushroom", col:5,  row:8}, {type:"fire", col:30, row:8}, {type:"fly", col:66, row:8} ],
+    [ {type:"mushroom", col:6,  row:8}, {type:"fire", col:40, row:8}, {type:"fly", col:70, row:8} ],
+  ];
+  function spawnPowerup(type, x, y) {
+    if (type === "mushroom")
+      powerups.push({ x:x+6, y:y+8, w:28, h:28, type:"mushroom", vx:1.1, vy:0, taken:false, phase:0 });
+    else
+      powerups.push({ x:x+6, y:y+6, w:28, h:30, type, vx:0, vy:0, taken:false, phase:Math.random()*6.28 });
+  }
+
   // ============================================================
   //  WORLD STATE
   // ============================================================
@@ -111,26 +138,42 @@ GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGG
   let solids = [];   // {x,y,w,h}
   let coins = [];    // {x,y,w,h,taken,phase}
   let enemies = [];  // {x,y,w,h,vx,alive,squash}
+  let powerups = []; // {x,y,w,h,type,vx,vy,taken,phase} type: mushroom|fire|fly
+  let fireballs = []; // {x,y,w,h,vx,vy,dead}
   let flag = null;   // {x,y,w,h}
   let levelW = 0, levelH = 0;
   let cameraX = 0;
   let particles = [];
+  let tick = 0;               // contador global de quadros (animação/piscar)
 
   const player = {
     x:0, y:0, w:30, h:38, vx:0, vy:0,
-    onGround:false, face:1, walk:0, dead:false, deadT:0, blink:0, spawnX:0, spawnY:0
+    onGround:false, face:1, walk:0, dead:false, deadT:0, blink:0, spawnX:0, spawnY:0,
+    power:"small",            // small | big | fire | fly
+    invuln:0,                 // quadros de invulnerabilidade após tomar dano
+    fireCd:0                  // recarga do tiro de fogo
   };
+
+  // Troca o poder ajustando o tamanho, mantendo os pés no chão e o centro.
+  function setPower(np) {
+    const s = sizeFor(np);
+    player.y += player.h - s.h;
+    player.x += (player.w - s.w) / 2;
+    player.w = s.w; player.h = s.h; player.power = np;
+  }
 
   // ============================================================
   //  INPUT
   // ============================================================
-  const keys = { left:false, right:false, jump:false, jumpHeld:false };
+  const keys = { left:false, right:false, jump:false, jumpHeld:false, fire:false };
 
   addEventListener("keydown", e => {
     if (["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," "].includes(e.key)) e.preventDefault();
     if (e.key === "ArrowLeft") keys.left = true;
     if (e.key === "ArrowRight") keys.right = true;
     if (e.key === "ArrowUp" || e.key === " ") { if (!keys.jumpHeld) keys.jump = true; keys.jumpHeld = true; }
+    const k = e.key.toLowerCase();
+    if (k === "f" || k === "x") { if (!e.repeat) keys.fire = true; }
   });
   addEventListener("keyup", e => {
     if (e.key === "ArrowLeft") keys.left = false;
@@ -153,6 +196,7 @@ GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGG
   bindTouch("btnLeft",  () => keys.left = true,  () => keys.left = false);
   bindTouch("btnRight", () => keys.right = true, () => keys.right = false);
   bindTouch("btnJump",  () => { keys.jump = true; keys.jumpHeld = true; }, () => keys.jumpHeld = false);
+  bindTouch("btnFire",  () => { keys.fire = true; }, () => {});
 
   if ("ontouchstart" in window) touchLayer.classList.add("on");
 
@@ -162,6 +206,7 @@ GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGG
   function loadLevel(idx) {
     const map = LEVELS[idx].split("\n");
     solids = []; coins = []; enemies = []; particles = []; flag = null;
+    powerups = []; fireballs = [];
     levelH = map.length * TILE;
     levelW = map[0].length * TILE;
 
@@ -175,6 +220,12 @@ GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGG
           coins.push({ x:x+10, y:y+8, w:20, h:24, taken:false, phase:Math.random()*6.28 });
         } else if (ch === "E") {
           enemies.push({ x:x+4, y:y+6, w:32, h:32, vx:-0.9, alive:true, squash:0 });
+        } else if (ch === "M") {
+          spawnPowerup("mushroom", x, y);
+        } else if (ch === "R") {
+          spawnPowerup("fire", x, y);
+        } else if (ch === "V") {
+          spawnPowerup("fly", x, y);
         } else if (ch === "F") {
           flag = { x:x+16, y:y - TILE*2, w:8, h:TILE*3 };
         } else if (ch === "P") {
@@ -182,14 +233,22 @@ GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGG
         }
       }
     }
-    respawnPlayer();
+    // power-ups posicionados por coordenada de tile
+    (POWERUPS_BY_LEVEL[idx] || []).forEach(pu => spawnPowerup(pu.type, pu.col * TILE, pu.row * TILE));
+    respawnPlayer(false);   // mantém o poder atual ao entrar numa fase nova
     cameraX = 0;
   }
 
-  function respawnPlayer() {
+  // resetPower=true zera para "small" (usado ao morrer/começar); senão mantém.
+  function respawnPlayer(resetPower) {
+    if (resetPower) player.power = "small";
+    const s = sizeFor(player.power);
+    player.w = s.w; player.h = s.h;
     player.x = player.spawnX; player.y = player.spawnY;
     player.vx = 0; player.vy = 0; player.dead = false; player.deadT = 0;
     player.face = 1; player.walk = 0; player.onGround = false;
+    player.invuln = 0; player.fireCd = 0;
+    fireballs = [];
   }
 
   // ============================================================
@@ -202,6 +261,7 @@ GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGG
         chosen, infinite,                 // preferências (sempre)
         inProgress,                       // há um jogo em andamento?
         levelIdx, score, lives: isFinite(lives) ? lives : START_LIVES,
+        power: player.power,              // poder atual (cogumelo/fogo/voo)
         best: bestScore()
       }));
     } catch (e) { /* localStorage indisponível — ignora */ }
@@ -225,6 +285,7 @@ GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGG
   function startGame(fresh) {
     if (fresh) {
       levelIdx = 0; score = 0; lives = infinite ? Infinity : START_LIVES;
+      player.power = "small";
     } else {
       const s = readSave();
       if (s) {
@@ -233,8 +294,10 @@ GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGG
         levelIdx = s.levelIdx ?? 0;
         score    = s.score ?? 0;
         lives    = infinite ? Infinity : (s.lives ?? START_LIVES);
+        player.power = s.power || "small";
       } else {
         levelIdx = 0; score = 0; lives = infinite ? Infinity : START_LIVES;
+        player.power = "small";
       }
     }
     startScreen.classList.add("hidden");
@@ -267,7 +330,7 @@ GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGG
 
   function loseLife() {
     if (infinite) {          // vidas infinitas: apenas renasce
-      respawnPlayer();
+      respawnPlayer(true);
       state = "play";
       return;
     }
@@ -278,16 +341,21 @@ GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGG
       saveProgress();        // fim de jogo: mantém preferências, encerra o progresso
       showMsg("💀 Fim de jogo", `Que pena! Pontuação: ${score} 🍎. Tente novamente.`, "🔁 Recomeçar");
     } else {
-      respawnPlayer();
+      respawnPlayer(true);
       state = "play";
       saveProgress();
     }
   }
 
+  const POWER_ICON = { small:"—", big:"🍄", fire:"🔥", fly:"🪽" };
+  const POWER_BG   = { small:"rgba(0,0,0,.28)", big:"rgba(220,60,50,.5)", fire:"rgba(255,120,40,.55)", fly:"rgba(80,160,255,.55)" };
   function updateHUD() {
     $score.textContent = score;
     $level.textContent = levelIdx + 1;
     $lives.textContent = infinite ? "∞" : lives;
+    if ($power) $power.textContent = POWER_ICON[player.power] || "—";
+    if ($powerBox) $powerBox.style.background = POWER_BG[player.power] || POWER_BG.small;
+    if ($btnFire) $btnFire.classList.toggle("hidden", player.power !== "fire");
   }
 
   // ============================================================
@@ -295,6 +363,7 @@ GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGG
   // ============================================================
   function update() {
     if (state !== "play") return;
+    tick++;
 
     const p = player;
 
@@ -313,18 +382,34 @@ GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGG
     p.vx = Math.max(-MAX_VX, Math.min(MAX_VX, p.vx));
     if (Math.abs(p.vx) < 0.05) p.vx = 0;
 
-    // Jump
+    // Jump (mais alto quando com power-up)
     if (keys.jump && p.onGround) {
-      p.vy = JUMP_VY;
+      p.vy = (p.power === "small") ? JUMP_VY : POWER_JUMP;
       p.onGround = false;
       spawnDust(p.x + p.w/2, p.y + p.h);
     }
     keys.jump = false;
-    // Variable jump height
-    if (!keys.jumpHeld && p.vy < -4) p.vy = -4;
+    // Variable jump height (não se aplica ao voo, que usa empuxo contínuo)
+    if (p.power !== "fly" && !keys.jumpHeld && p.vy < -4) p.vy = -4;
 
     p.vy += GRAVITY;
+
+    // Voo: segurar pular dá empuxo para cima (flor voadora 🪽)
+    if (p.power === "fly" && keys.jumpHeld) {
+      p.vy -= FLY_THRUST;
+      if (p.vy < FLY_MAX_UP) p.vy = FLY_MAX_UP;
+      if (tick % 4 === 0) spawnDust(p.x + p.w/2, p.y + p.h);
+    }
     if (p.vy > 16) p.vy = 16;
+
+    // Tiro de fogo (flor de fogo 🔥)
+    if (p.fireCd > 0) p.fireCd--;
+    if (keys.fire && p.power === "fire" && p.fireCd <= 0) {
+      shootFireball();
+      p.fireCd = FIRE_COOLDOWN;
+    }
+    keys.fire = false;
+    if (p.invuln > 0) p.invuln--;
 
     // Move + collide X
     p.x += p.vx;
@@ -348,6 +433,8 @@ GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGG
 
     updateEnemies();
     updateCoins();
+    updatePowerups();
+    updateFireballs();
     updateParticles();
 
     // Flag / goal
@@ -424,8 +511,17 @@ GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGG
           p.vy = JUMP_VY * 0.62;
           score += 100; updateHUD();
           spawnPop(e.x + e.w/2, e.y + e.h/2);
-        } else {
-          killPlayer();
+        } else if (p.invuln <= 0) {
+          if (p.power !== "small") {
+            // perde o poder em vez de morrer (estilo Mario)
+            setPower("small");
+            p.invuln = 100;
+            p.vy = -6;
+            spawnSpark(p.x + p.w/2, p.y + p.h/2);
+            updateHUD();
+          } else {
+            killPlayer();
+          }
         }
       }
     }
@@ -449,6 +545,105 @@ GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGG
     player.dead = true;
     player.deadT = 0;
     player.vy = -9;
+  }
+
+  // ---- POWER-UPS ----
+  function updatePowerups() {
+    const p = player;
+    for (const it of powerups) {
+      if (it.taken) continue;
+      it.phase += 0.1;
+
+      if (it.type === "mushroom") {
+        // cogumelo anda e cai, virando nas paredes (estilo Mario)
+        it.vy += GRAVITY; if (it.vy > 14) it.vy = 14;
+        it.x += it.vx;
+        for (const s of solids) {
+          if (rectsOverlap(it, s)) {
+            if (it.vx > 0) it.x = s.x - it.w; else it.x = s.x + s.w;
+            it.vx *= -1;
+          }
+        }
+        it.y += it.vy;
+        for (const s of solids) {
+          if (rectsOverlap(it, s)) {
+            if (it.vy > 0) { it.y = s.y - it.h; it.vy = 0; }
+            else { it.y = s.y + s.h; it.vy = 0; }
+          }
+        }
+        if (it.x < 0) { it.x = 0; it.vx *= -1; }
+        if (it.x + it.w > levelW) { it.x = levelW - it.w; it.vx *= -1; }
+      }
+
+      // coleta
+      if (rectsOverlap(p, it)) {
+        it.taken = true;
+        collectPower(it.type);
+        spawnSpark(it.x + it.w/2, it.y + it.h/2);
+      }
+    }
+  }
+
+  function collectPower(type) {
+    const p = player;
+    if (type === "mushroom") {
+      if (p.power === "small") setPower("big");
+      else score += 1000;         // já grande: vira pontos
+    } else if (type === "fire") {
+      setPower("fire");
+      score += 200;
+    } else if (type === "fly") {
+      setPower("fly");
+      score += 200;
+    }
+    updateHUD();
+  }
+
+  // ---- FIREBALLS ----
+  function shootFireball() {
+    if (fireballs.filter(f => !f.dead).length >= 3) return;   // no máx. 3 na tela
+    const p = player;
+    const dir = p.face;
+    fireballs.push({
+      x: p.x + (dir > 0 ? p.w : -12),
+      y: p.y + p.h * 0.35,
+      w: 12, h: 12, vx: dir * 6.2, vy: -1.5, dead: false
+    });
+  }
+
+  function updateFireballs() {
+    for (const f of fireballs) {
+      if (f.dead) continue;
+      f.vy += 0.4;
+      // horizontal
+      f.x += f.vx;
+      for (const s of solids) {
+        if (rectsOverlap(f, s)) { f.dead = true; break; }   // bate na parede
+      }
+      // vertical (quica no chão)
+      f.y += f.vy;
+      for (const s of solids) {
+        if (rectsOverlap(f, s)) {
+          if (f.vy > 0) { f.y = s.y - f.h; f.vy = -5.2; }    // quica
+          else { f.y = s.y + s.h; f.vy = 0; }
+        }
+      }
+      if (f.x < 0 || f.x > levelW || f.y > levelH + 40) f.dead = true;
+
+      // acerta inimigos
+      if (!f.dead) {
+        for (const e of enemies) {
+          if (e.alive && rectsOverlap(f, e)) {
+            e.alive = false; e.squash = 16;
+            score += 150; updateHUD();
+            spawnPop(e.x + e.w/2, e.y + e.h/2);
+            f.dead = true;
+            break;
+          }
+        }
+      }
+    }
+    fireballs = fireballs.filter(f => !f.dead);
   }
 
   // ---- particles ----
@@ -552,6 +747,80 @@ GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGG
     }
   }
 
+  function drawPowerups() {
+    for (const it of powerups) {
+      if (it.taken) continue;
+      const x = it.x - cameraX, y = it.y;
+      if (x + it.w < 0 || x > W) continue;
+      const cx = x + it.w/2, cy = y + it.h/2;
+      const bob = Math.sin(it.phase) * 2;
+
+      if (it.type === "mushroom") {
+        // caule
+        ctx.fillStyle = "#f2e2c4";
+        roundRect(cx - 8, cy, 16, it.h/2 - 2, 4); ctx.fill();
+        // olhinhos
+        ctx.fillStyle = "#000";
+        ctx.fillRect(cx - 5, cy + 4, 3, 5); ctx.fillRect(cx + 2, cy + 4, 3, 5);
+        // chapéu vermelho
+        ctx.fillStyle = "#e23b2e";
+        ctx.beginPath(); ctx.arc(cx, cy, it.w/2, Math.PI, 0); ctx.closePath(); ctx.fill();
+        ctx.fillRect(cx - it.w/2, cy, it.w, 3);
+        // pintas brancas
+        ctx.fillStyle = "#fff";
+        ctx.beginPath(); ctx.arc(cx, cy - 6, 4, 0, 7); ctx.arc(cx - 8, cy - 2, 3, 0, 7); ctx.arc(cx + 8, cy - 2, 3, 0, 7); ctx.fill();
+      } else {
+        // FLOR (fogo = laranja/vermelho, voo = azul/branco)
+        const fire = it.type === "fire";
+        const petal = fire ? "#ff8a2b" : "#7fd1ff";
+        const petal2 = fire ? "#ffcf33" : "#d4ecff";
+        // caule + folha
+        ctx.strokeStyle = "#3fa64d"; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(cx, cy + 2 + bob); ctx.lineTo(cx, y + it.h); ctx.stroke();
+        ctx.fillStyle = "#3fa64d";
+        ctx.beginPath(); ctx.ellipse(cx + 7, y + it.h - 6, 6, 3, -0.6, 0, 7); ctx.fill();
+        // pétalas
+        ctx.save(); ctx.translate(cx, cy - 4 + bob);
+        ctx.fillStyle = petal;
+        for (let i = 0; i < 6; i++) {
+          ctx.rotate(Math.PI / 3);
+          ctx.beginPath(); ctx.ellipse(0, -9, 5, 8, 0, 0, 7); ctx.fill();
+        }
+        // asinhas na flor voadora
+        if (!fire) {
+          ctx.fillStyle = "rgba(255,255,255,.9)";
+          const flap = Math.sin(it.phase * 3) * 0.3;
+          ctx.save(); ctx.rotate(-0.5 + flap); ctx.beginPath(); ctx.ellipse(-14, -6, 7, 4, 0, 0, 7); ctx.fill(); ctx.restore();
+          ctx.save(); ctx.rotate(0.5 - flap); ctx.beginPath(); ctx.ellipse(14, -6, 7, 4, 0, 0, 7); ctx.fill(); ctx.restore();
+        }
+        // miolo
+        ctx.fillStyle = petal2;
+        ctx.beginPath(); ctx.arc(0, -4, 6, 0, 7); ctx.fill();
+        ctx.fillStyle = fire ? "#e23b2e" : "#4a90e2";
+        ctx.beginPath(); ctx.arc(0, -4, 3, 0, 7); ctx.fill();
+        ctx.restore();
+      }
+    }
+  }
+
+  function drawFireballs() {
+    for (const f of fireballs) {
+      const x = f.x - cameraX + f.w/2, y = f.y + f.h/2;
+      // brilho
+      ctx.globalAlpha = 0.5;
+      ctx.fillStyle = "#ffb02e";
+      ctx.beginPath(); ctx.arc(x, y, f.w * 0.9, 0, 7); ctx.fill();
+      ctx.globalAlpha = 1;
+      // núcleo
+      ctx.fillStyle = "#e23b2e";
+      ctx.beginPath(); ctx.arc(x, y, f.w/2, 0, 7); ctx.fill();
+      ctx.save(); ctx.translate(x, y); ctx.rotate(tick * 0.4);
+      ctx.fillStyle = "#ffe15a";
+      ctx.beginPath(); ctx.arc(0, 0, f.w/3.4, 0, 7); ctx.fill();
+      ctx.restore();
+    }
+  }
+
   function drawFlag() {
     if (!flag) return;
     const fx = flag.x - cameraX;
@@ -631,7 +900,35 @@ GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGG
     const c = CHARACTERS[ch];
     if (!c.ready) return;
     const dispH = h + 24;                 // draw a bit taller than the hitbox
-    drawSprite(ctx, ch, x + w/2, y + h + 2, dispH, face, walk, dead);
+    const cx = x + w/2, midY = y + h * 0.45;
+
+    // efeitos ATRÁS do personagem
+    if (!dead && player.power === "fly") {
+      // asas batendo (mais rápido ao subir)
+      const asc = keys.jumpHeld ? 1 : 0.4;
+      const flap = Math.sin(tick * (0.25 + 0.2 * asc)) * (0.5 + 0.3 * asc);
+      ctx.save(); ctx.translate(cx, midY);
+      ctx.fillStyle = "rgba(255,255,255,.92)";
+      ctx.strokeStyle = "rgba(150,200,255,.9)"; ctx.lineWidth = 1.5;
+      for (const sgn of [-1, 1]) {
+        ctx.save(); ctx.scale(sgn, 1); ctx.rotate(-0.5 + flap);
+        ctx.beginPath(); ctx.ellipse(-w*0.55, 0, 16, 8, 0, 0, 7); ctx.fill(); ctx.stroke();
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+    if (!dead && player.power === "fire") {
+      // brilho quente ao redor
+      ctx.save();
+      ctx.globalAlpha = 0.25 + Math.abs(Math.sin(tick * 0.2)) * 0.15;
+      const g = ctx.createRadialGradient(cx, midY, 4, cx, midY, w);
+      g.addColorStop(0, "#ffd23f"); g.addColorStop(1, "rgba(255,120,40,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(cx, midY, w, 0, 7); ctx.fill();
+      ctx.restore();
+    }
+
+    drawSprite(ctx, ch, cx, y + h + 2, dispH, face, walk, dead);
   }
 
   function roundRect(x, y, w, h, r) {
@@ -657,11 +954,17 @@ GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGG
     drawBackground();
     drawSolids();
     drawCoins();
+    drawPowerups();
     drawFlag();
     drawEnemies();
+    drawFireballs();
     drawParticles();
     if (state === "play" || state === "dead") {
-      drawDino(player.x - cameraX, player.y, player.w, player.h, player.face, player.walk, chosen, player.dead);
+      // pisca durante a invulnerabilidade
+      const blink = player.invuln > 0 && (Math.floor(tick / 4) % 2 === 0);
+      if (!blink) {
+        drawDino(player.x - cameraX, player.y, player.w, player.h, player.face, player.walk, chosen, player.dead);
+      }
     }
   }
 
@@ -775,6 +1078,17 @@ GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGG
 
   // aplica qualquer save/preferência ao abrir
   refreshStartScreen();
+
+  // Hook de depuração (só com ?debug=1 na URL) — usado em testes automatizados.
+  if (typeof location !== "undefined" && /[?&]debug=1/.test(location.search)) {
+    window.__DINO = {
+      player,
+      give: (t) => collectPower(t),
+      fireballs: () => fireballs,
+      powerups: () => powerups,
+      get state() { return state; },
+    };
+  }
 
   function drawPreview(pctx, idx) {
     const c = CHARACTERS[idx];
