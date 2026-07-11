@@ -8,12 +8,16 @@ foto com remoção de fundo (segmentação GrabCut), preservando a arte original
 
 ## Como jogar
 
-Abra `index.html` em qualquer navegador moderno — não há dependências, build ou
-servidor. Também funciona por HTTP:
+**Basta dar duplo-clique em `index.html`** — abre em qualquer navegador moderno,
+sem servidor, sem build e sem dependências. Os sprites dos personagens vêm
+embutidos (base64, em `assets.js`), então não há arquivos externos que o
+navegador possa bloquear no modo `file://`.
+
+Se preferir, também funciona por HTTP local (opcional):
 
 ```bash
 cd game
-python3 -m http.server 8000
+python3 -m http.server 8000   # ou: npx serve
 # acesse http://localhost:8000
 ```
 
@@ -61,4 +65,5 @@ Segure o botão de pulo para pular mais alto (altura variável).
 Arquivos:
 - `index.html` — estrutura, telas (início, seleção de personagem, mensagens) e HUD.
 - `game.js` — motor do jogo, física, níveis e renderização.
-- `assets/rex.png`, `assets/lima.png` — sprites dos personagens recortados da foto.
+- `assets.js` — sprites embutidos em base64 (permite abrir sem servidor).
+- `assets/rex.png`, `assets/lima.png` — sprites originais recortados da foto (fonte do base64).

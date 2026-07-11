@@ -31,9 +31,13 @@
   // `spark` is an accent color used only for particle effects.
   // `nativeFacing` = the direction the source art already faces (1=right, -1=left);
   // the sprite is mirrored when the player moves the other way.
+  // As imagens vêm embutidas em base64 (assets.js), assim o jogo abre
+  // direto pelo index.html, sem precisar de servidor. Se assets.js não
+  // estiver presente, cai para os arquivos em assets/.
+  const S = (typeof window !== "undefined" && window.SPRITES) || {};
   const CHARACTERS = [
-    { name:"Rex",  src:"assets/rex.png",  spark:"#ffd23f", nativeFacing:1, img:null, ready:false },
-    { name:"Lima", src:"assets/lima.png", spark:"#ffd23f", nativeFacing:1, img:null, ready:false },
+    { name:"Rex",  src:S.rex  || "assets/rex.png",  spark:"#ffd23f", nativeFacing:1, img:null, ready:false },
+    { name:"Lima", src:S.lima || "assets/lima.png", spark:"#ffd23f", nativeFacing:1, img:null, ready:false },
   ];
   let chosen = 0;
 
