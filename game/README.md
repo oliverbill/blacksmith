@@ -35,6 +35,18 @@ Segure o botão de pulo para pular mais alto (altura variável).
 - ❤ Você começa com 3 vidas. Cair em buracos ou ser atingido custa uma vida.
 - São **3 fases**; conclua todas para vencer.
 
+## Opções
+
+- **Escolha do personagem**: selecione **Rex** ou **Lima** na tela inicial. A
+  escolha é lembrada entre as sessões.
+- **♾️ Vidas infinitas**: ative o botão na tela inicial (ou durante o jogo) para
+  jogar sem perder — ao cair ou ser atingido, você simplesmente renasce. O HUD
+  mostra `∞`.
+- **💾 Salvar progresso**: o jogo salva automaticamente (fase, pontuação, vidas,
+  personagem e modo) no `localStorage` do navegador. Se houver um jogo em
+  andamento, o botão **Continuar** aparece na tela inicial e retoma exatamente de
+  onde você parou. **Novo jogo** recomeça da fase 1 mantendo suas preferências.
+
 ## Detalhes técnicos
 
 - Canvas 2D — os personagens jogáveis usam os sprites reais recortados da foto
@@ -43,6 +55,8 @@ Segure o botão de pulo para pular mais alto (altura variável).
   por AABB, câmera com rolagem lateral e fundo em parallax.
 - Inimigos patrulham plataformas e mudam de direção nas bordas.
 - Suporte a teclado e a controles de toque (mobile).
+- Progresso e preferências persistidos em `localStorage` (chave
+  `dinobros_save_v1`).
 
 Arquivos:
 - `index.html` — estrutura, telas (início, seleção de personagem, mensagens) e HUD.

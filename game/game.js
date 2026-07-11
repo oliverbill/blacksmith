@@ -101,6 +101,9 @@ GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGG
   let state = "start"; // start | play | dead | win | gameover
   let levelIdx = 0;
   let score = 0, lives = 3;
+  let infinite = false;          // modo vidas infinitas
+  const START_LIVES = 3;
+  const SAVE_KEY = "dinobros_save_v1";
   let solids = [];   // {x,y,w,h}
   let coins = [];    // {x,y,w,h,taken,phase}
   let enemies = [];  // {x,y,w,h,vx,alive,squash}
@@ -186,15 +189,56 @@ GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGG
   }
 
   // ============================================================
+  //  SAVE / LOAD  (localStorage)
+  // ============================================================
+  function saveProgress() {
+    const inProgress = (state === "play" || state === "dead" || state === "levelend");
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify({
+        chosen, infinite,                 // preferências (sempre)
+        inProgress,                       // há um jogo em andamento?
+        levelIdx, score, lives: isFinite(lives) ? lives : START_LIVES,
+        best: bestScore()
+      }));
+    } catch (e) { /* localStorage indisponível — ignora */ }
+  }
+  function readSave() {
+    try { return JSON.parse(localStorage.getItem(SAVE_KEY) || "null"); }
+    catch (e) { return null; }
+  }
+  function clearSave() {
+    try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+  }
+  function bestScore() {
+    const s = readSave();
+    return Math.max(score, (s && s.best) || 0);
+  }
+
+  // ============================================================
   //  GAME FLOW
   // ============================================================
-  function startGame() {
-    levelIdx = 0; score = 0; lives = 3;
+  // fresh = novo jogo (zera progresso); senão retoma o save existente.
+  function startGame(fresh) {
+    if (fresh) {
+      levelIdx = 0; score = 0; lives = infinite ? Infinity : START_LIVES;
+    } else {
+      const s = readSave();
+      if (s) {
+        chosen   = s.chosen ?? chosen;
+        infinite = !!s.infinite;
+        levelIdx = s.levelIdx ?? 0;
+        score    = s.score ?? 0;
+        lives    = infinite ? Infinity : (s.lives ?? START_LIVES);
+      } else {
+        levelIdx = 0; score = 0; lives = infinite ? Infinity : START_LIVES;
+      }
+    }
     startScreen.classList.add("hidden");
     msgScreen.classList.add("hidden");
     loadLevel(levelIdx);
     state = "play";
     updateHUD();
+    saveProgress();
   }
 
   function showMsg(title, text, btn) {
@@ -208,29 +252,38 @@ GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGG
     levelIdx++;
     if (levelIdx >= LEVELS.length) {
       state = "win";
+      saveProgress();   // guarda preferências, marca jogo como concluído (sem "continuar")
       showMsg("🏆 Você venceu!", `Parabéns! ${CHARACTERS[chosen].name} atravessou todo o bosque. Pontuação final: ${score} 🍎`, "🔁 Jogar de novo");
     } else {
       state = "levelend";
+      saveProgress();
       showMsg("✔ Fase concluída!", `Rumo à fase ${levelIdx + 1}. Pontuação: ${score} 🍎`, "▶ Próxima fase");
     }
   }
 
   function loseLife() {
+    if (infinite) {          // vidas infinitas: apenas renasce
+      respawnPlayer();
+      state = "play";
+      return;
+    }
     lives--;
     updateHUD();
     if (lives <= 0) {
       state = "gameover";
+      saveProgress();        // fim de jogo: mantém preferências, encerra o progresso
       showMsg("💀 Fim de jogo", `Que pena! Pontuação: ${score} 🍎. Tente novamente.`, "🔁 Recomeçar");
     } else {
       respawnPlayer();
       state = "play";
+      saveProgress();
     }
   }
 
   function updateHUD() {
     $score.textContent = score;
     $level.textContent = levelIdx + 1;
-    $lives.textContent = lives;
+    $lives.textContent = infinite ? "∞" : lives;
   }
 
   // ============================================================
@@ -651,7 +704,40 @@ GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGG
   // ============================================================
   //  UI WIRING
   // ============================================================
-  startBtn.addEventListener("click", startGame);
+  const continueBtn = document.getElementById("continueBtn");
+  const infiniteChk = document.getElementById("infiniteChk");
+
+  // Reflete um save existente na tela inicial (personagem, modo e botão continuar)
+  function refreshStartScreen() {
+    const s = readSave();
+    // botão continuar só aparece se há um jogo em andamento salvo
+    if (s && s.inProgress) {
+      continueBtn.classList.remove("hidden");
+      continueBtn.textContent = `⏵ Continuar (Fase ${(s.levelIdx ?? 0) + 1})`;
+    } else {
+      continueBtn.classList.add("hidden");
+    }
+    // restaura personagem e modo escolhidos anteriormente
+    if (s) {
+      chosen = s.chosen ?? chosen;
+      infinite = !!s.infinite;
+    }
+    infiniteChk.checked = infinite;
+    charEls.forEach(e => e.classList.toggle("sel", parseInt(e.dataset.char, 10) === chosen));
+  }
+
+  startBtn.addEventListener("click", () => startGame(true));   // novo jogo (mantém só as preferências)
+  continueBtn.addEventListener("click", () => startGame(false));
+
+  infiniteChk.addEventListener("change", () => {
+    infinite = infiniteChk.checked;
+    if (state === "play") {
+      if (infinite) lives = Infinity;
+      else if (!isFinite(lives)) lives = START_LIVES;   // volta a um valor finito
+      updateHUD();
+    }
+    saveProgress();
+  });
 
   msgBtn.addEventListener("click", () => {
     if (state === "levelend") {
@@ -660,9 +746,10 @@ GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGG
       state = "play";
       updateHUD();
     } else if (state === "win" || state === "gameover") {
-      startScreen.classList.remove("hidden");
       msgScreen.classList.add("hidden");
+      startScreen.classList.remove("hidden");
       state = "start";
+      refreshStartScreen();
     }
   });
 
@@ -673,14 +760,17 @@ GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGG
       charEls.forEach(e => e.classList.remove("sel"));
       el.classList.add("sel");
       chosen = parseInt(el.dataset.char, 10);
+      saveProgress();
     });
     // draw preview
     const idx = parseInt(el.dataset.char, 10);
     const pc = el.querySelector("canvas");
     const pctx = pc.getContext("2d");
-    // temporarily borrow drawDino using an offscreen approach
     drawPreview(pctx, idx);
   });
+
+  // aplica qualquer save/preferência ao abrir
+  refreshStartScreen();
 
   function drawPreview(pctx, idx) {
     const c = CHARACTERS[idx];
