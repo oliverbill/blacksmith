@@ -27,14 +27,23 @@
   // ============================================================
   //  CHARACTERS
   // ============================================================
-  // Two dinosaurs inspired by the reference art.
+  // Two dinosaurs cut out directly from the reference photo (PNG sprites).
+  // `spark` is an accent color used only for particle effects.
+  // `nativeFacing` = the direction the source art already faces (1=right, -1=left);
+  // the sprite is mirrored when the player moves the other way.
   const CHARACTERS = [
-    { name:"Rex",  skin:"#3f9e4d", belly:"#bfe08a", bow:"#ffd23f",
-      shirt:"#e63b2e", shirtDark:"#b52519", pants:"#3b6bd6", shoes:"#ff8a2b", eyelid:"#3b6bd6" },
-    { name:"Lima", skin:"#8ad14f", belly:"#e8f5b0", bow:"#ffd23f",
-      shirt:"#ffcf33", shirtDark:"#e0a800", pants:"#8a94a6", shoes:"#8a5a2b", eyelid:"#333" },
+    { name:"Rex",  src:"assets/rex.png",  spark:"#ffd23f", nativeFacing:1, img:null, ready:false },
+    { name:"Lima", src:"assets/lima.png", spark:"#ffd23f", nativeFacing:1, img:null, ready:false },
   ];
   let chosen = 0;
+
+  // preload sprite images
+  CHARACTERS.forEach(c => {
+    const img = new Image();
+    img.onload = () => { c.ready = true; };
+    img.src = c.src;
+    c.img = img;
+  });
 
   // ============================================================
   //  PHYSICS CONSTANTS
@@ -558,96 +567,14 @@ GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGG
   }
 
   // ---------- PLAYER DINO ----------
+  // Player is rendered from the extracted photo sprite. The physics hitbox
+  // (w,h) is smaller than the drawn sprite; the sprite is bottom-centered on
+  // the hitbox so the feet line up with the ground.
   function drawDino(x, y, w, h, face, walk, ch, dead) {
     const c = CHARACTERS[ch];
-    ctx.save();
-    ctx.translate(x + w/2, y + h);
-    ctx.scale(face, 1); // flip horizontally by facing
-
-    const legSwing = Math.sin(walk) * 5;
-    const bob = Math.abs(Math.sin(walk)) * 1.5;
-    const yb = -bob;
-
-    // ---- LEGS ----
-    ctx.fillStyle = c.pants;
-    ctx.fillRect(-9, -12 + yb, 8, 12 + legSwing);          // back leg
-    ctx.fillRect(1, -12 + yb, 8, 12 - legSwing);           // front leg
-    // shoes
-    ctx.fillStyle = c.shoes;
-    roundRect(-11, -3 + legSwing + yb, 13, 6, 3); ctx.fill();
-    roundRect(-1, -3 - legSwing + yb, 13, 6, 3); ctx.fill();
-
-    // ---- TAIL ----
-    ctx.fillStyle = c.skin;
-    ctx.beginPath();
-    ctx.moveTo(-8, -26 + yb);
-    ctx.quadraticCurveTo(-26, -20 + yb, -30, -6 + yb + Math.sin(walk)*2);
-    ctx.quadraticCurveTo(-22, -14 + yb, -8, -18 + yb);
-    ctx.closePath(); ctx.fill();
-
-    // ---- BODY / SHIRT ----
-    ctx.fillStyle = c.shirt;
-    roundRect(-13, -34 + yb, 26, 24, 9); ctx.fill();
-    // belly of shirt lighter
-    ctx.fillStyle = c.shirtDark;
-    roundRect(-13, -16 + yb, 26, 6, 4); ctx.fill();
-    // arm
-    ctx.fillStyle = c.shirt;
-    roundRect(6, -30 + yb, 9, 16 + Math.sin(walk)*2, 4); ctx.fill();
-    ctx.fillStyle = c.skin;
-    ctx.beginPath(); ctx.arc(11, -14 + yb + Math.sin(walk)*2, 4, 0, 7); ctx.fill();
-
-    // ---- NECK / HEAD ----
-    ctx.fillStyle = c.skin;
-    // neck
-    roundRect(-6, -44 + yb, 14, 14, 5); ctx.fill();
-    // head (big rounded snout dino)
-    ctx.beginPath();
-    ctx.ellipse(2, -52 + yb, 17, 15, 0, 0, 7); ctx.fill();
-    // snout extends forward
-    ctx.beginPath();
-    ctx.ellipse(15, -48 + yb, 10, 8, 0, 0, 7); ctx.fill();
-    // nostril
-    ctx.fillStyle = "rgba(0,0,0,.5)";
-    ctx.beginPath(); ctx.arc(22, -50 + yb, 1.4, 0, 7); ctx.fill();
-
-    // ---- EYE (big cartoon) ----
-    ctx.fillStyle = "#fff";
-    ctx.beginPath(); ctx.ellipse(6, -58 + yb, 8, 10, 0, 0, 7); ctx.fill();
-    // eyelid color accent (top)
-    ctx.fillStyle = c.eyelid;
-    ctx.beginPath(); ctx.ellipse(6, -64 + yb, 8, 4, 0, Math.PI, 0); ctx.fill();
-    // pupil
-    if (dead) {
-      ctx.strokeStyle = "#000"; ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(3, -60 + yb); ctx.lineTo(9, -54 + yb);
-      ctx.moveTo(9, -60 + yb); ctx.lineTo(3, -54 + yb);
-      ctx.stroke();
-    } else {
-      ctx.fillStyle = "#111";
-      ctx.beginPath(); ctx.arc(8, -56 + yb, 3.4, 0, 7); ctx.fill();
-      ctx.fillStyle = "#fff";
-      ctx.beginPath(); ctx.arc(9, -57 + yb, 1.2, 0, 7); ctx.fill();
-    }
-
-    // ---- BOW on head ----
-    ctx.fillStyle = c.bow;
-    // left loop
-    ctx.beginPath(); ctx.moveTo(-6, -66 + yb);
-    ctx.quadraticCurveTo(-18, -74 + yb, -14, -60 + yb);
-    ctx.quadraticCurveTo(-11, -58 + yb, -6, -64 + yb);
-    ctx.closePath(); ctx.fill();
-    // right loop
-    ctx.beginPath(); ctx.moveTo(-4, -66 + yb);
-    ctx.quadraticCurveTo(4, -76 + yb, 2, -62 + yb);
-    ctx.quadraticCurveTo(-1, -60 + yb, -4, -64 + yb);
-    ctx.closePath(); ctx.fill();
-    // knot
-    ctx.fillStyle = c.shirtDark;
-    ctx.beginPath(); ctx.arc(-6, -65 + yb, 3, 0, 7); ctx.fill();
-
-    ctx.restore();
+    if (!c.ready) return;
+    const dispH = h + 24;                 // draw a bit taller than the hitbox
+    drawSprite(ctx, ch, x + w/2, y + h + 2, dispH, face, walk, dead);
   }
 
   function roundRect(x, y, w, h, r) {
@@ -679,6 +606,32 @@ GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGG
     if (state === "play" || state === "dead") {
       drawDino(player.x - cameraX, player.y, player.w, player.h, player.face, player.walk, chosen, player.dead);
     }
+  }
+
+  // Draw a character sprite (from the photo) into the given 2D context,
+  // bottom-centered on (cx, footY), scaled to display height dispH.
+  function drawSprite(g, ch, cx, footY, dispH, faceDir, walk, dead) {
+    const c = CHARACTERS[ch];
+    if (!c.ready) return;
+    const ar = c.img.width / c.img.height;
+    const dh = dispH;
+    const dw = dh * ar;
+    const bob = Math.abs(Math.sin(walk)) * 2;            // little walk bounce
+    const tilt = Math.sin(walk) * 0.05;                  // subtle body sway
+    const flip = (faceDir !== c.nativeFacing) ? -1 : 1;
+
+    g.save();
+    g.translate(cx, footY - bob);
+    if (dead) {
+      g.globalAlpha = 0.9;
+      g.rotate(Math.PI);                                 // flip over when defeated
+      g.drawImage(c.img, -dw/2, 0, dw, dh);
+    } else {
+      g.rotate(tilt);
+      g.scale(flip, 1);
+      g.drawImage(c.img, -dw/2, -dh, dw, dh);
+    }
+    g.restore();
   }
 
   // ============================================================
@@ -730,46 +683,17 @@ GGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGG..GGGGGGGGGGGGGGGGGGGGGGGGGGGG
   });
 
   function drawPreview(pctx, idx) {
-    // reuse main ctx routines by swapping context reference is messy,
-    // so redraw a simplified static dino here.
     const c = CHARACTERS[idx];
-    pctx.clearRect(0, 0, 96, 96);
-    pctx.save(); pctx.translate(48, 86);
-    // legs
-    pctx.fillStyle = c.pants; pctx.fillRect(-9, -12, 8, 12); pctx.fillRect(1, -12, 8, 12);
-    pctx.fillStyle = c.shoes; rr(pctx,-11,-3,13,6,3); rr(pctx,-1,-3,13,6,3);
-    // tail
-    pctx.fillStyle = c.skin;
-    pctx.beginPath(); pctx.moveTo(-8,-26); pctx.quadraticCurveTo(-26,-20,-30,-6);
-    pctx.quadraticCurveTo(-22,-14,-8,-18); pctx.closePath(); pctx.fill();
-    // body
-    pctx.fillStyle = c.shirt; rr(pctx,-13,-34,26,24,9);
-    pctx.fillStyle = c.shirtDark; rr(pctx,-13,-16,26,6,4);
-    pctx.fillStyle = c.shirt; rr(pctx,6,-30,9,16,4);
-    pctx.fillStyle = c.skin; pctx.beginPath(); pctx.arc(11,-14,4,0,7); pctx.fill();
-    // head
-    pctx.fillStyle = c.skin; rr(pctx,-6,-44,14,14,5);
-    pctx.beginPath(); pctx.ellipse(2,-52,17,15,0,0,7); pctx.fill();
-    pctx.beginPath(); pctx.ellipse(15,-48,10,8,0,0,7); pctx.fill();
-    pctx.fillStyle="rgba(0,0,0,.5)"; pctx.beginPath(); pctx.arc(22,-50,1.4,0,7); pctx.fill();
-    // eye
-    pctx.fillStyle="#fff"; pctx.beginPath(); pctx.ellipse(6,-58,8,10,0,0,7); pctx.fill();
-    pctx.fillStyle=c.eyelid; pctx.beginPath(); pctx.ellipse(6,-64,8,4,0,Math.PI,0); pctx.fill();
-    pctx.fillStyle="#111"; pctx.beginPath(); pctx.arc(8,-56,3.4,0,7); pctx.fill();
-    pctx.fillStyle="#fff"; pctx.beginPath(); pctx.arc(9,-57,1.2,0,7); pctx.fill();
-    // bow
-    pctx.fillStyle=c.bow;
-    pctx.beginPath(); pctx.moveTo(-6,-66); pctx.quadraticCurveTo(-18,-74,-14,-60);
-    pctx.quadraticCurveTo(-11,-58,-6,-64); pctx.closePath(); pctx.fill();
-    pctx.beginPath(); pctx.moveTo(-4,-66); pctx.quadraticCurveTo(4,-76,2,-62);
-    pctx.quadraticCurveTo(-1,-60,-4,-64); pctx.closePath(); pctx.fill();
-    pctx.fillStyle=c.shirtDark; pctx.beginPath(); pctx.arc(-6,-65,3,0,7); pctx.fill();
-    pctx.restore();
-  }
-  function rr(g,x,y,w,h,r){
-    g.beginPath(); g.moveTo(x+r,y);
-    g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r);
-    g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); g.fill();
+    const W2 = pctx.canvas.width, H2 = pctx.canvas.height;
+    const render = () => {
+      pctx.clearRect(0, 0, W2, H2);
+      const ar = c.img.width / c.img.height;
+      const dh = H2 - 6;
+      const dw = dh * ar;
+      pctx.drawImage(c.img, (W2 - dw) / 2, H2 - dh - 3, dw, dh);
+    };
+    if (c.ready) render();
+    else c.img.addEventListener("load", render, { once:true });
   }
 
 })();

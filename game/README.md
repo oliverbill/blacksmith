@@ -1,8 +1,10 @@
 # 🦕 Dino Bros — Aventura no Bosque
 
 Um jogo de plataforma em HTML5 no estilo **Super Mario Bros**, protagonizado por
-dois dinossauros inspirados na arte de referência: **Rex** (verde, jaqueta
-vermelha, laço amarelo) e **Lima** (verde-claro, camisa amarela, laço amarelo).
+dois dinossauros **recortados diretamente da imagem enviada**: **Rex** (verde,
+jaqueta vermelha, laço amarelo) e **Lima** (verde-claro, camisa amarela, laço
+amarelo). Os sprites em `assets/rex.png` e `assets/lima.png` foram extraídos da
+foto com remoção de fundo (segmentação GrabCut), preservando a arte original.
 
 ## Como jogar
 
@@ -35,8 +37,8 @@ Segure o botão de pulo para pular mais alto (altura variável).
 
 ## Detalhes técnicos
 
-- 100% Canvas 2D — todos os personagens, inimigos e cenários são desenhados
-  proceduralmente (sem imagens externas).
+- Canvas 2D — os personagens jogáveis usam os sprites reais recortados da foto
+  (`assets/*.png`); inimigos, moedas e cenário são desenhados proceduralmente.
 - Física de plataforma com gravidade, atrito, pulo de altura variável, colisão
   por AABB, câmera com rolagem lateral e fundo em parallax.
 - Inimigos patrulham plataformas e mudam de direção nas bordas.
@@ -45,3 +47,4 @@ Segure o botão de pulo para pular mais alto (altura variável).
 Arquivos:
 - `index.html` — estrutura, telas (início, seleção de personagem, mensagens) e HUD.
 - `game.js` — motor do jogo, física, níveis e renderização.
+- `assets/rex.png`, `assets/lima.png` — sprites dos personagens recortados da foto.
