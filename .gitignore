@@ -34,6 +34,9 @@ build/
 src/main/resources/application-local.properties
 test_minimax.py
 
+### Claude Code ###
+.claude/
+
 ### Secrets ###
 .env
 /logs/blacksmith.log.2026-04-14.0.gz
