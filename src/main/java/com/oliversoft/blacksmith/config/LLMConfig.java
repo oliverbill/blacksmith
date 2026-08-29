@@ -79,7 +79,12 @@ public class LLMConfig {
     @Bean
     @Qualifier("minimax")
     public ChatClient minimaxClient(MiniMaxChatModel model){
-        
+
         return ChatClient.builder(model).build();
     }
+
+    // The dev-only "claude-sdk" ChatClient (subscription-backed, via the local claude CLI) is no
+    // longer defined here — it's auto-configured by the com.oliversoft:claude-cli-chat-model
+    // library whenever claude-cli.enabled=true (see application-dev.properties). LLMRouter picks
+    // it up as an optional @Qualifier("claude-sdk") bean, unchanged.
 }

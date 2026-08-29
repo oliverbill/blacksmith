@@ -4,11 +4,13 @@ import com.oliversoft.blacksmith.model.enumeration.AgentName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.beans.factory.ObjectProvider;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class LLMRouterTest {
 
@@ -17,6 +19,7 @@ class LLMRouterTest {
     private ChatClient openrouterClient;
     private ChatClient openrouterClient2;
     private ChatClient openrouterClient3;
+    private ObjectProvider<ChatClient> claudeSdkClientProvider;
 
     @BeforeEach
     void setUp() {
@@ -24,8 +27,11 @@ class LLMRouterTest {
         openrouterClient = mock(ChatClient.class);
         openrouterClient2 = mock(ChatClient.class);
         openrouterClient3 = mock(ChatClient.class);
+        claudeSdkClientProvider = mock(ObjectProvider.class);
+        when(claudeSdkClientProvider.getIfAvailable()).thenReturn(null); // dev profile off by default
 
-        router = new LLMRouter(minimaxClient, openrouterClient, openrouterClient2, openrouterClient3);
+        router = new LLMRouter(minimaxClient, openrouterClient, openrouterClient2, openrouterClient3,
+            claudeSdkClientProvider);
     }
 
     // ── CONSTITUTION ──────────────────────────────────────────────────────────
@@ -127,5 +133,39 @@ class LLMRouterTest {
 
         assertThat(record.name()).isEqualTo("test-provider");
         assertThat(record.client()).isSameAs(minimaxClient);
+    }
+
+    // ── dev-profile Claude SDK override (Developer agent only) ─────────────────
+
+    @Test
+    void getClientsByPriority_forDeveloper_whenClaudeSdkClientAbsent_usesApiFallbackChainUnchanged() {
+        // claudeSdkClientProvider.getIfAvailable() returns null by default (see setUp) — prod/non-dev behavior.
+        List<LLMRouter.RoutedChatClient> clients = router.getClientsByPriority(AgentName.DEVELOPER);
+
+        assertThat(clients.stream().map(LLMRouter.RoutedChatClient::name).toList())
+            .containsExactly("minimax", "openrouter", "openrouter2", "openrouter3");
+    }
+
+    @Test
+    void getClientsByPriority_forDeveloper_whenClaudeSdkClientPresent_returnsOnlyItWithNoFallback() {
+        ChatClient claudeSdkClient = mock(ChatClient.class);
+        when(claudeSdkClientProvider.getIfAvailable()).thenReturn(claudeSdkClient);
+
+        List<LLMRouter.RoutedChatClient> clients = router.getClientsByPriority(AgentName.DEVELOPER);
+
+        assertThat(clients).hasSize(1);
+        assertThat(clients.get(0).name()).isEqualTo("claude-sdk");
+        assertThat(clients.get(0).client()).isSameAs(claudeSdkClient);
+    }
+
+    @Test
+    void getClientsByPriority_forConstitutionAndArchitect_ignoreClaudeSdkClientEvenWhenPresent() {
+        ChatClient claudeSdkClient = mock(ChatClient.class);
+        when(claudeSdkClientProvider.getIfAvailable()).thenReturn(claudeSdkClient);
+
+        assertThat(router.getClientsByPriority(AgentName.CONSTITUTION).stream().map(LLMRouter.RoutedChatClient::name))
+            .containsExactly("minimax", "openrouter", "openrouter2");
+        assertThat(router.getClientsByPriority(AgentName.ARCHITECT).stream().map(LLMRouter.RoutedChatClient::name))
+            .containsExactly("minimax", "openrouter", "openrouter2");
     }
 }

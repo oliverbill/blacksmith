@@ -47,10 +47,45 @@ public class BlacksmithUtils {
         if (cleaned.startsWith("[") && cleaned.endsWith("]")) {
             String inner = cleaned.substring(1, cleaned.length() - 1).trim();
             if (inner.startsWith("{")) {
+                if (hasContentAfterFirstTopLevelObject(inner)) {
+                    // Jackson's readValue/readTree silently parse only the first object and drop
+                    // everything after it (no exception, no trailing-token check by default) — so
+                    // an unguarded unwrap here would make later objects (and any files in them)
+                    // vanish with zero trace. Fail loudly instead; this feeds into the same
+                    // retry/next-provider fallback already used for malformed JSON.
+                    throw new PipelineExecutionException(
+                        "LLM returned a JSON array with more than one object; refusing to silently " +
+                        "collapse it to a single object: " + content);
+                }
                 cleaned = inner;
             }
         }
         return cleaned;
+    }
+
+    /** True if there is non-whitespace content after the first top-level {...} object closes. */
+    private static boolean hasContentAfterFirstTopLevelObject(String s) {
+        int depth = 0;
+        boolean inString = false;
+        boolean escaped = false;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (inString) {
+                if (escaped) escaped = false;
+                else if (c == '\\') escaped = true;
+                else if (c == '"') inString = false;
+                continue;
+            }
+            if (c == '"') { inString = true; continue; }
+            if (c == '{') depth++;
+            else if (c == '}') {
+                depth--;
+                if (depth == 0) {
+                    return !s.substring(i + 1).trim().isEmpty();
+                }
+            }
+        }
+        return false;
     }
 
     public static boolean isOutputValid(AgentOutput output) {

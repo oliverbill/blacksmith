@@ -26,6 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -284,6 +285,115 @@ class RunRestControllerTest {
         mockMvc.perform(get("/api/runs/1/artifacts"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].id").value(100));
+    }
+
+    // ── GET /api/runs/{id}/artifacts — content integrity (e2e/API) ─────────────
+    //
+    // The existing test above only asserts on `id`; none of the pre-existing suite ever checked
+    // that `content` — the actual agent-generated JSON payload, potentially hundreds of KB of file
+    // contents — survives the full round trip (entity -> Jackson serialization -> HTTP response ->
+    // MockMvc parsing) byte-for-byte. These close that gap explicitly.
+
+    @Test
+    void getArtifactsByRun_withLargeArtifactContent_returnsItByteForByteUnchanged() throws Exception {
+        var run = TenantRun.builder().id(1L).tenant(tenant()).title("R")
+            .spec("s").issueType(IssueType.FEATURE).build();
+        when(runRepo.findById(1L)).thenReturn(Optional.of(run));
+
+        // Realistic size for a DeveloperOutput carrying several full file contents.
+        String largeFileBody = "public class Big {\n" + "    // filler line of source code\n".repeat(15_000) + "}";
+        String largeContent = objectMapper.writeValueAsString(java.util.Map.of(
+            "changedFiles", List.of(java.util.Map.of("filePath", "Big.java", "content", largeFileBody)),
+            "newFiles", List.of()
+        ));
+        assertThatContentIsLarge(largeContent);
+
+        var artifact = RunArtifact.builder()
+            .id(200L).run(run)
+            .agentName(AgentName.DEVELOPER)
+            .artifactType(ArtifactType.CODE)
+            .content(largeContent)
+            .build();
+        when(artifactRepo.findByRun(run)).thenReturn(List.of(artifact));
+
+        var responseBody = mockMvc.perform(get("/api/runs/1/artifacts"))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+
+        // Round-trip through the real ObjectMapper the same way a real API consumer would,
+        // rather than jsonPath string matching, so escaping bugs on either side can't hide.
+        var parsed = objectMapper.readTree(responseBody);
+        String returnedContent = parsed.get(0).get("content").asText();
+
+        assertThat(returnedContent).isEqualTo(largeContent);
+        assertThat(returnedContent.length()).isEqualTo(largeContent.length());
+    }
+
+    @Test
+    void getArtifactsByRun_withSpecialCharactersInContent_preservesThemExactly() throws Exception {
+        var run = TenantRun.builder().id(1L).tenant(tenant()).title("R")
+            .spec("s").issueType(IssueType.FEATURE).build();
+        when(runRepo.findById(1L)).thenReturn(Optional.of(run));
+
+        // Embedded quotes, backslashes, newlines, unicode — exactly the characters a naive
+        // truncation/escaping fix could mangle.
+        String trickyContent = objectMapper.writeValueAsString(java.util.Map.of(
+            "changedFiles", List.of(java.util.Map.of(
+                "filePath", "Weird.java",
+                "content", "class Weird {\n  String s = \"a \\\"quote\\\" and a \\\\ backslash\";\n  // café ☕ 日本語\n}"
+            )),
+            "newFiles", List.of()
+        ));
+
+        var artifact = RunArtifact.builder()
+            .id(201L).run(run)
+            .agentName(AgentName.DEVELOPER)
+            .artifactType(ArtifactType.CODE)
+            .content(trickyContent)
+            .build();
+        when(artifactRepo.findByRun(run)).thenReturn(List.of(artifact));
+
+        var responseBody = mockMvc.perform(get("/api/runs/1/artifacts"))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+
+        String returnedContent = objectMapper.readTree(responseBody).get(0).get("content").asText();
+        assertThat(returnedContent).isEqualTo(trickyContent);
+    }
+
+    @Test
+    void getArtifactsByRun_withMultipleArtifacts_doesNotMixOrTruncateBetweenEntries() throws Exception {
+        var run = TenantRun.builder().id(1L).tenant(tenant()).title("R")
+            .spec("s").issueType(IssueType.FEATURE).build();
+        when(runRepo.findById(1L)).thenReturn(Optional.of(run));
+
+        String constitutionContent = "{\"summary\":\"" + "A".repeat(50_000) + "\"}";
+        String architectContent = "{\"plannedTasks\":[" + "{\"id\":\"t\"},".repeat(1000) + "{\"id\":\"last\"}]}";
+
+        var constitutionArtifact = RunArtifact.builder()
+            .id(300L).run(run).agentName(AgentName.CONSTITUTION).artifactType(ArtifactType.CONSTITUTION)
+            .content(constitutionContent).build();
+        var architectArtifact = RunArtifact.builder()
+            .id(301L).run(run).agentName(AgentName.ARCHITECT).artifactType(ArtifactType.IMPACT_ANALYSIS)
+            .content(architectContent).build();
+        when(artifactRepo.findByRun(run)).thenReturn(List.of(constitutionArtifact, architectArtifact));
+
+        var responseBody = mockMvc.perform(get("/api/runs/1/artifacts"))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+
+        var parsed = objectMapper.readTree(responseBody);
+        assertThat(parsed).hasSize(2);
+        assertThat(parsed.get(0).get("content").asText()).isEqualTo(constitutionContent);
+        assertThat(parsed.get(1).get("content").asText()).isEqualTo(architectContent);
+        // Explicitly confirm no cross-contamination/truncation collapsed the two distinct payloads.
+        assertThat(parsed.get(0).get("content").asText()).isNotEqualTo(parsed.get(1).get("content").asText());
+    }
+
+    private static void assertThatContentIsLarge(String content) {
+        assertThat(content.length())
+            .as("test payload must actually be large enough to expose truncation bugs")
+            .isGreaterThan(400_000);
     }
 
     // ── GET /api/runs/{id}/tasks ──────────────────────────────────────────────

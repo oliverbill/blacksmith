@@ -89,7 +89,7 @@ public class BlacksmithAgent {
                         candidate.name(), agent, i + 1, candidates.size());
                 try {
                     var result = processAndReturnJson(candidate.client(), systemPrompt, userPrompt, outputType, agent);
-                    if (isOutputValid((AgentOutput) result)) {
+                    if (!isOutputValid((AgentOutput) result)) {
                         log.warn("*** Provider {} returned invalid output for agent {} — trying next provider ***",
                                 candidate.name(), agent);
                         failures.add(new PipelineExecutionException("Provider " + candidate.name() + " returned invalid output"));

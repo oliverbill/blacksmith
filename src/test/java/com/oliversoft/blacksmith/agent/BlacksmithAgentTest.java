@@ -4,12 +4,21 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.oliversoft.blacksmith.core.ContextBuilder;
 import com.oliversoft.blacksmith.exception.PipelineExecutionException;
 import com.oliversoft.blacksmith.model.dto.input.ArchitectInput;
+import com.oliversoft.blacksmith.model.dto.input.DeveloperInput;
 import com.oliversoft.blacksmith.model.dto.output.ArchitectOutput;
+import com.oliversoft.blacksmith.model.dto.output.DeveloperOutput;
 import com.oliversoft.blacksmith.model.enumeration.AgentName;
 import com.oliversoft.blacksmith.router.LLMRouter;
+import com.oliversoft.blacksmith.router.LLMRouter.RoutedChatClient;
 import com.oliversoft.blacksmith.tool.BashTools;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.metadata.ChatResponseMetadata;
+import org.springframework.ai.chat.metadata.DefaultUsage;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.model.Generation;
 import org.springframework.web.client.RestClientResponseException;
 
 import java.lang.reflect.Method;
@@ -19,6 +28,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -202,6 +213,89 @@ class BlacksmithAgentTest {
         boolean result = (boolean) isRateLimit.invoke(agent, outer);
 
         assertThat(result).isTrue();
+    }
+
+    // ── processInput success/fallback branch (candidate output validity) ──────
+    //
+    // These exercise tryProcessWithAllCandidates end-to-end against a mocked ChatClient,
+    // rather than only the isRateLimit helper — no prior test in this class ever drove a
+    // full processInput() call to a successful return.
+
+    private static ChatResponse chatResponseWithText(String text) {
+        var metadata = ChatResponseMetadata.builder().usage(new DefaultUsage(10, 10)).build();
+        return new ChatResponse(List.of(new Generation(new AssistantMessage(text))), metadata);
+    }
+
+    /** Builds a ChatClient mock whose prompt().system(...).user(...).call().chatResponse() returns the given text. */
+    private static ChatClient chatClientReturning(String text) {
+        ChatClient client = mock(ChatClient.class, RETURNS_DEEP_STUBS);
+        when(client.prompt().system(anyString()).user(anyString()).call().chatResponse())
+            .thenReturn(chatResponseWithText(text));
+        return client;
+    }
+
+    @Test
+    void processInput_whenSingleProviderReturnsCompleteNonEmptyOutput_returnsThatOutputAsSuccess() {
+        // ARCHITECT does not attach BashTools, so the mocked chain is prompt().system().user().call() — no .tools().
+        String completeJson = """
+            {"plan":{"changeTitle":"T","changeDetail":"D","affectedFiles":[],"newFiles":[],"dependencies":[],"risks":[]},
+             "plannedTasks":[{"id":"t1","description":"do it","filenamePath":"src/A.java","dependentTasks":[]}]}
+            """;
+        ChatClient client = chatClientReturning(completeJson);
+
+        when(contextBuilder.getSystemPrompt(AgentName.ARCHITECT)).thenReturn(Optional.of("system"));
+        when(contextBuilder.buildUserPrompt(any())).thenReturn("user");
+        when(router.getClientsByPriority(AgentName.ARCHITECT))
+            .thenReturn(List.of(new RoutedChatClient("test-provider", client)));
+
+        var result = agent.processInput(new ArchitectInput(null, "spec"), AgentName.ARCHITECT, ArchitectOutput.class);
+
+        assertThat(result.providerName()).isEqualTo("test-provider");
+        assertThat(result.output().plan().changeTitle()).isEqualTo("T");
+        assertThat(result.output().plannedTasks()).hasSize(1);
+    }
+
+    @Test
+    void processInput_whenDeveloperProviderReturnsNonEmptyChangedFiles_returnsThatOutputAsSuccess() {
+        String completeJson = """
+            {"changedFiles":[{"filePath":"src/A.java","content":"class A {}","repoUrl":"https://example.com/r.git"}],
+             "newFiles":[]}
+            """;
+        ChatClient client = mock(ChatClient.class, RETURNS_DEEP_STUBS);
+        // DEVELOPER attaches BashTools via .tools(...) before .call() — stub that step too.
+        when(client.prompt().system(anyString()).user(anyString()).tools(any(BashTools.class)).call().chatResponse())
+            .thenReturn(chatResponseWithText(completeJson));
+
+        when(contextBuilder.getSystemPrompt(AgentName.DEVELOPER)).thenReturn(Optional.of("system"));
+        when(contextBuilder.buildUserPrompt(any())).thenReturn("user");
+        when(router.getClientsByPriority(AgentName.DEVELOPER))
+            .thenReturn(List.of(new RoutedChatClient("test-provider", client)));
+
+        var input = new DeveloperInput(null, null, null, List.of("https://example.com/r.git"), null);
+        var result = agent.processInput(input, AgentName.DEVELOPER, DeveloperOutput.class);
+
+        assertThat(result.output().changedFiles()).hasSize(1);
+        assertThat(result.output().changedFiles().get(0).content()).isEqualTo("class A {}");
+    }
+
+    @Test
+    void processInput_whenDeveloperProviderReturnsEmptyOutput_fallsBackAndEventuallyThrows() {
+        String emptyJson = """
+            {"changedFiles":[],"newFiles":[]}
+            """;
+        ChatClient client = mock(ChatClient.class, RETURNS_DEEP_STUBS);
+        when(client.prompt().system(anyString()).user(anyString()).tools(any(BashTools.class)).call().chatResponse())
+            .thenReturn(chatResponseWithText(emptyJson));
+
+        when(contextBuilder.getSystemPrompt(AgentName.DEVELOPER)).thenReturn(Optional.of("system"));
+        when(contextBuilder.buildUserPrompt(any())).thenReturn("user");
+        when(router.getClientsByPriority(AgentName.DEVELOPER))
+            .thenReturn(List.of(new RoutedChatClient("test-provider", client)));
+
+        var input = new DeveloperInput(null, null, null, List.of("https://example.com/r.git"), null);
+
+        assertThatThrownBy(() -> agent.processInput(input, AgentName.DEVELOPER, DeveloperOutput.class))
+            .isInstanceOf(PipelineExecutionException.class);
     }
 
     // ── Integration: real LLM call with DeveloperInput ────────────────────────

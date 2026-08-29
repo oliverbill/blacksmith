@@ -3,6 +3,8 @@ package com.oliversoft.blacksmith.util;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.oliversoft.blacksmith.exception.PipelineExecutionException;
 import com.oliversoft.blacksmith.model.dto.output.ArchitectOutput;
+import com.oliversoft.blacksmith.model.dto.output.ConstitutionOutput;
+import com.oliversoft.blacksmith.model.dto.output.DeveloperOutput;
 import com.oliversoft.blacksmith.model.entity.RunArtifact;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -115,5 +117,145 @@ class BlacksmithUtilsTest {
         assertThat(restored.plan().risks()).containsExactly("risk1");
         assertThat(restored.plannedTasks()).hasSize(2);
         assertThat(restored.plannedTasks().get(1).dependentTasks()).containsExactly("t1");
+    }
+
+    // ── cleanJson: no silent truncation of large/complex content ───────────────
+
+    @Test
+    void cleanJson_withNull_returnsEmptyString() {
+        assertThat(BlacksmithUtils.cleanJson(null)).isEmpty();
+    }
+
+    @Test
+    void cleanJson_withLargePlainObject_returnsItByteForByteUnchanged() {
+        // Simulates a large DeveloperOutput with many full file contents — the exact scenario
+        // where a naive length-limiting fix (substring/truncate) would silently corrupt data.
+        String largeFileBody = "public class Big {\n" + "    // filler line\n".repeat(20_000) + "}";
+        String json = "{\"changedFiles\":[{\"filePath\":\"Big.java\",\"content\":\"" + escapeJson(largeFileBody) + "\"}]}";
+        assertThat(json.length()).isGreaterThan(300_000); // sanity: this really is a "large" payload
+
+        String cleaned = BlacksmithUtils.cleanJson(json);
+
+        assertThat(cleaned).isEqualTo(json);
+        assertThat(cleaned.length()).isEqualTo(json.length());
+    }
+
+    @Test
+    void cleanJson_stripsMarkdownFences_withoutTouchingInnerContent() {
+        String inner = "{\"a\":1,\"b\":\"has ``` inside a string too\"}";
+        String fenced = "```json\n" + inner + "\n```";
+
+        String cleaned = BlacksmithUtils.cleanJson(fenced);
+
+        // Current implementation strips ALL ``` occurrences, including ones inside string values —
+        // documenting this as a known limitation rather than assuming it's safe.
+        assertThat(cleaned).doesNotContain("```json");
+        assertThat(cleaned).contains("\"a\":1");
+    }
+
+    @Test
+    void cleanJson_unwrapsSingleElementObjectArray() {
+        String obj = "{\"changedFiles\":[],\"newFiles\":[]}";
+        String wrapped = "[" + obj + "]";
+
+        assertThat(BlacksmithUtils.cleanJson(wrapped)).isEqualTo(obj);
+    }
+
+    @Test
+    void cleanJson_withMultiElementArray_throwsInsteadOfSilentlyDroppingData() {
+        // Jackson's readValue/readTree do NOT fail on trailing tokens by default — they silently
+        // parse only the first object and discard the rest. Naively unwrapping [{...},{...}] into
+        // "{...},{...}" would make the second object (and any files in it) vanish with zero trace.
+        // cleanJson must refuse to do that and fail loudly instead, feeding the existing
+        // retry/next-provider fallback that already handles malformed JSON.
+        String multiElement = "[{\"changedFiles\":[]},{\"newFiles\":[{\"filePath\":\"Lost.java\"}]}]";
+
+        assertThatThrownBy(() -> BlacksmithUtils.cleanJson(multiElement))
+            .isInstanceOf(PipelineExecutionException.class)
+            .hasMessageContaining("more than one object");
+    }
+
+    @Test
+    void cleanJson_withNestedObjectsInsideSingleElement_stillUnwrapsCorrectly() {
+        // Regression guard for the brace-depth counter added alongside the multi-element check:
+        // nested {...} inside the single array element must not be mistaken for a second element.
+        String obj = "{\"outer\":{\"inner\":{\"deep\":1}},\"list\":[1,2,3]}";
+        String wrapped = "[" + obj + "]";
+
+        assertThat(BlacksmithUtils.cleanJson(wrapped)).isEqualTo(obj);
+    }
+
+    @Test
+    void cleanJson_withStringValueContainingBracesAndCommas_doesNotFalselyDetectMultipleObjects() {
+        // The brace-depth counter must ignore braces/commas that appear inside string literals,
+        // including escaped quotes within them.
+        String obj = "{\"summary\":\"looks like an object } , { but it's just a string\",\"escaped\":\"a \\\" quote\"}";
+        String wrapped = "[" + obj + "]";
+
+        assertThat(BlacksmithUtils.cleanJson(wrapped)).isEqualTo(obj);
+    }
+
+    @Test
+    void cleanJson_withPlainObjectNotWrapped_isReturnedUnchangedEvenIfItContainsBracketLikeText() {
+        String json = "{\"summary\":\"the list is [1,2,3] and stays that way\"}";
+
+        assertThat(BlacksmithUtils.cleanJson(json)).isEqualTo(json);
+    }
+
+    private static String escapeJson(String raw) {
+        return raw.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n");
+    }
+
+    // ── isOutputValid: precise truncation/emptiness semantics ───────────────────
+
+    @Test
+    void isOutputValid_forNonDeveloperOutput_isAlwaysTrue() {
+        var constitution = new ConstitutionOutput(null, List.of(), List.of(), List.of(), List.of(), List.of(),
+            null, null, null, null);
+
+        assertThat(BlacksmithUtils.isOutputValid(constitution)).isTrue();
+    }
+
+    @Test
+    void isOutputValid_forDeveloperOutput_withBothListsEmpty_isFalse() {
+        var output = new DeveloperOutput(List.of(), List.of());
+
+        assertThat(BlacksmithUtils.isOutputValid(output)).isFalse();
+    }
+
+    @Test
+    void isOutputValid_forDeveloperOutput_withBothListsNull_isFalse() {
+        var output = new DeveloperOutput(null, null);
+
+        assertThat(BlacksmithUtils.isOutputValid(output)).isFalse();
+    }
+
+    @Test
+    void isOutputValid_forDeveloperOutput_withOnlyChangedFilesPopulated_isTrue() {
+        var file = new DeveloperOutput.GeneratedFile("A.java", "class A {}", "https://example.com/r.git");
+        var output = new DeveloperOutput(List.of(file), List.of());
+
+        assertThat(BlacksmithUtils.isOutputValid(output)).isTrue();
+    }
+
+    @Test
+    void isOutputValid_forDeveloperOutput_withOnlyNewFilesPopulated_isTrue() {
+        var file = new DeveloperOutput.GeneratedFile("B.java", "class B {}", "https://example.com/r.git");
+        var output = new DeveloperOutput(List.of(), List.of(file));
+
+        assertThat(BlacksmithUtils.isOutputValid(output)).isTrue();
+    }
+
+    @Test
+    void isOutputValid_forDeveloperOutput_withFileContentTruncatedToEmptyString_stillReportsValid() {
+        // KNOWN GAP, pinned deliberately: isOutputValid only checks list emptiness, never whether
+        // an individual GeneratedFile.content was itself cut short (e.g. by a provider hitting its
+        // max-output-token limit mid-file, still yielding syntactically valid JSON). A file entry
+        // with empty/truncated content passes this check. If this test starts failing because the
+        // gap was closed, that's a genuine improvement — update the assertion, don't "fix" it back.
+        var truncatedFile = new DeveloperOutput.GeneratedFile("Truncated.java", "", "https://example.com/r.git");
+        var output = new DeveloperOutput(List.of(truncatedFile), List.of());
+
+        assertThat(BlacksmithUtils.isOutputValid(output)).isTrue();
     }
 }
